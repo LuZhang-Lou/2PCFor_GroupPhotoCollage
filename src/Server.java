@@ -1,20 +1,15 @@
-/* Skeleton code for Server */
-
-import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BooleanSupplier;
-
-public class Server implements ProjectLib.CommitServing {
 
 
-    public enum TXNStatus {ONGOING, FAILED, COMMIT};
+// todo: if memory is limited, can remove failed or commited txn from the transactionMap
+public class Server implements ProjectLib.CommitServing, ProjectLib.MessageHandling {
 
     //todo: should it be static given that server might fail?
     public static ProjectLib PL;
     public static AtomicInteger lastTXN = new AtomicInteger(0);
-    public static ConcurrentHashMap<Integer, TXNStatus> transactionMap = new ConcurrentHashMap<>();
-    public static ConcurrentHashMap<Integer, Integer> commitMap = new ConcurrentHashMap<>();
+    // transactionMap. K:filename  V:Transaction info, including txnid and status
+    public static ConcurrentHashMap<String, Transaction> transactionMap = new ConcurrentHashMap<>();
 
     /*
     filename - name of canddate image file
@@ -37,7 +32,7 @@ public class Server implements ProjectLib.CommitServing {
         }
 
         final int newTXNID = lastTXN.getAndIncrement();
-        transactionMap.put(newTXNID, TXNStatus.ONGOING);
+        transactionMap.put(filename, new Transaction(newTXNID, nodes));
 
         // send inquiry to each component.
         for (int i = 0; i < num; ++i){
@@ -60,6 +55,25 @@ public class Server implements ProjectLib.CommitServing {
         ProjectLib.Message synMsg = new ProjectLib.Message(node, sb.toString().getBytes());
         PL.sendMessage(synMsg);
 
+
+        while (true){
+            Transaction curtTxn = transactionMap.get(filename);
+            curtTxn.
+        }
+    }
+
+
+    public boolean deliverMessage(ProjectLib.Message comingMsg){
+        String addr = comingMsg.addr;
+        String body = new String(comingMsg.body);
+        String[] parts = body.split(":");
+        if (parts[0].equalsIgnoreCase("SYN:")){
+            Transaction txn = transactionMap.get(parts[1]);
+            if (transactionMap.get(parts[1]).status == Transaction.TXNStatus.ONGOING){
+                txn.consensusCnt.incrementAndGet();
+            }
+
+        }
     }
 
 	public static void main ( String args[] ) throws Exception {
