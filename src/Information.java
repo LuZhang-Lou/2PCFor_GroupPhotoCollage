@@ -1,6 +1,7 @@
 import org.omg.PortableInterceptor.INACTIVE;
 
 import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 /**
@@ -11,7 +12,7 @@ public class Information {
     actionType action;
     String filename;
     String node;
-    String []component;
+    ArrayList<String> components;
     byte[] img;
     boolean reply;
 
@@ -19,7 +20,7 @@ public class Information {
         this.action = orig.action;
         this.filename = orig.filename;
         this.node = orig.node;
-        this.component = orig.component;
+        this.components = orig.components;
     }
 
     Information (String actionStr){
@@ -39,17 +40,17 @@ public class Information {
 
     }
 
-    Information(String actionStr, String filename, String node, String []component){
+    Information(String actionStr, String filename, String node, ArrayList<String>components){
         this(actionStr);
         this.node = node;
         this.filename = filename;
-        this.component = component;
+        this.components = components;
         this.reply = false;
         this.img = new byte[1];
     }
 
-    Information(String actionStr, String filename, String node, String[] component, byte[] img){
-        this(actionStr, filename, node, component);
+    Information(String actionStr, String filename, String node, ArrayList<String> components, byte[] img){
+        this(actionStr, filename, node, components);
         this.img = img;
     }
 
@@ -99,8 +100,9 @@ public class Information {
         Information converted = (Information) obj;
 
         // don't need to consider the equality of reply.
+        // assume filename is unique
         return (this.action.equals(converted.action) && this.node.equals(converted.node) &&
-                this.filename.equals(converted.filename) && this.component.equals(converted.component));
+                this.filename.equals(converted.filename));
     }
 
     @Override
@@ -115,7 +117,7 @@ public class Information {
             actionStr = "COMMIT";
         }
         // action : filename : node: component : reply + byte[] img
-        sb.append(actionStr).append(":").append(this.filename).append(":").append(this.node).append(":").append(this.component).append(":").append(this.reply).append("+").append(img);
+        sb.append(actionStr).append(":").append(this.filename).append(":").append(this.node).append(":").append(this.components.toString()).append(":").append(this.reply).append("+").append(img);
         return sb.toString();
     }
 

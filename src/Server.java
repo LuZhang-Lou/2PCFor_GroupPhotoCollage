@@ -50,13 +50,13 @@ public class Server implements ProjectLib.CommitServing{
         transactionMap.put(filename, new Transaction(filename, img, localSourceMap.size()));
 
         // send inquiry to each component.
-        for (int i = 0; i < num; ++i){
-            String node = nodes[i];
-            String component = components[i];
-            Information inquiry = new Information("ASK", filename, node, component, img);
+        for (Map.Entry<String, ArrayList<String>> entry : localSourceMap.entrySet()){
+            String node = entry.getKey();
+            ArrayList<String> components = entry.getValue();
+            Information inquiry = new Information("ASK", filename, node, components, img);
             blockingSendMsg(node, inquiry);
-
         }
+
 	}
 
     public static void blockingSendMsg(String dest, Information info){
