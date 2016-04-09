@@ -1,4 +1,7 @@
-import java.util.Objects;
+import org.omg.PortableInterceptor.INACTIVE;
+
+import java.lang.reflect.Array;
+import java.util.Arrays;
 
 /**
  * Created by Lu on 4/9/16.
@@ -6,10 +9,18 @@ import java.util.Objects;
 public class Information {
     public static enum actionType{ ASK, ABORT, COMMIT };
     actionType action;
-    boolean reply;
     String filename;
     String node;
-    String component;
+    String []component;
+    byte[] img;
+    boolean reply;
+
+    Information(Information orig){
+        this.action = orig.action;
+        this.filename = orig.filename;
+        this.node = orig.node;
+        this.component = orig.component;
+    }
 
     Information (String actionStr){
         try {
@@ -28,19 +39,30 @@ public class Information {
 
     }
 
-    Information(String actionStr, String filename, String node, String component){
+    Information(String actionStr, String filename, String node, String []component){
         this(actionStr);
         this.node = node;
         this.filename = filename;
         this.component = component;
         this.reply = false;
+        this.img = new byte[1];
     }
 
+    Information(String actionStr, String filename, String node, String[] component, byte[] img){
+        this(actionStr, filename, node, component);
+        this.img = img;
+    }
+
+    // will only get img[] when reveice ack of inquiry
     Information(byte[] bytes){
         String value = new String(bytes);
+        int idx = value.indexOf("+");
+        if (idx != -1) {
+            value = value.substring(0, idx);
+        }
         String[] parts = value.split(":");
         try{
-        if (parts.length != 4) {
+        if (parts.length != 5) {
             throw new Exception("Error Bytes to construct Information");
         }
         }catch (Exception e){
@@ -49,9 +71,17 @@ public class Information {
         // action : filename : node: component : reply
         this.action = Information.valueOf(parts[0]);
         this.filename = parts[1];
-        String node = parts[2]
+        String node = parts[2];
         this.component = parts[3];
         this.reply = Boolean.valueOf(parts[4]);
+
+        if (idx != -1) {
+            this.img = new byte[bytes.length - idx];
+            img = Arrays.copyOfRange(bytes, idx, bytes.length - 1);
+        } else {
+            img = new byte[1];
+        }
+
     }
 
     @Override
@@ -84,8 +114,8 @@ public class Information {
         } else {
             actionStr = "COMMIT";
         }
-        // action : filename : node: component : reply
-        sb.append(actionStr).append(":").append(this.filename).append(":").append(this.node).append(":").append(this.component).append(":").append(this.reply);
+        // action : filename : node: component : reply + byte[] img
+        sb.append(actionStr).append(":").append(this.filename).append(":").append(this.node).append(":").append(this.component).append(":").append(this.reply).append("+").append(img);
         return sb.toString();
     }
 

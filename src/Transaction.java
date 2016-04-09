@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -7,32 +8,28 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class Transaction {
 
-    public enum TXNStatus {ONGOING, FAILED, COMMIT};
+    public enum TXNStatus {INQUIRY, ABORT, COMMIT};
     public String filename;
     public TXNStatus status;
     public AtomicInteger consensusCnt;
     public int nodeCnt;
-
+    public byte[] img;
     // key: node:component, value : the answer
     public ConcurrentHashMap<Source, Boolean> answerList;
-    Transaction(String filename, String[] nodes, String[] components){
+
+    Transaction(String filename, byte[] img, int num){
         this.filename = filename;
-        this.status = TXNStatus.ONGOING;
+        this.status = TXNStatus.INQUIRY;
         consensusCnt = new AtomicInteger(0);
         this.answerList = new ConcurrentHashMap<>();
-        this.nodeCnt = nodes.length;
-
-        for (int i = 0; i < nodes.length; i++){
-            String n = nodes[i];
-            String c = components[i];
-        }
-
+        this.nodeCnt = num;
+        this.img = img;
     }
 
     public static class Source{
         String node;
-        String component;
-        Source(String node, String component){
+        String[] component;
+        Source(String node, String[] component){
             this.node = node;
             this.component = component;
         }

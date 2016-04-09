@@ -1,7 +1,10 @@
-import com.sun.org.apache.xpath.internal.operations.Bool;
 
+import java.io.FileOutputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -12,7 +15,7 @@ public class Server implements ProjectLib.CommitServing{
     public static ProjectLib PL;
 //    public static AtomicInteger lastTXN = new AtomicInteger(0);
     public static ConcurrentHashMap<String, Transaction> transactionMap = new ConcurrentHashMap<>();
-    public static ConcurrentHashMap<Information, Boolean> globalReplyList = new ConcurrentHashMap<>();
+    public static ConcurrentHashMap<Information, AtomicBoolean> globalReplyList = new ConcurrentHashMap<>();
 
     /*
     filename - name of canddate image file
@@ -23,51 +26,53 @@ public class Server implements ProjectLib.CommitServing{
         AtomicInteger reply = new AtomicInteger(0);
 		System.out.println( "Server: Got request to commit "+filename );
         int num = sources.length;
-        String []nodes = new String[num];
-        String []components = new String[num];
+
+        HashMap<String, ArrayList<String>> localSourceMap = new HashMap<>();
 
         // extract nodes and components
         for (int i = 0; i < num; ++i){
             String str = sources[i];
             int delimeterIdx = str.indexOf(":");
-            nodes[i] = str.substring(0, delimeterIdx);
-            components[i] = str.substring(delimeterIdx);
+
+            String node = str.substring(0, delimeterIdx);
+            String component = str.substring(delimeterIdx);
+
+            if (localSourceMap.containsKey(node)){
+                ArrayList<String> components = localSourceMap.get(node);
+                components.add(component);
+            } else {
+                ArrayList<String> components = new ArrayList<>();
+                components.add(component);
+                localSourceMap.put(node, components);
+            }
         }
 
-        transactionMap.put(filename, new Transaction(filename, nodes, components));
+        transactionMap.put(filename, new Transaction(filename, img, localSourceMap.size()));
 
         // send inquiry to each component.
         for (int i = 0; i < num; ++i){
             String node = nodes[i];
             String component = components[i];
-            Information inquiry = new Information("ASK", filename, node, component);
+            Information inquiry = new Information("ASK", filename, node, component, img);
             blockingSendMsg(node, inquiry);
 
         }
 	}
 
-    public void blockingSendMsg(String dest, Information info){
+    public static void blockingSendMsg(String dest, Information info){
         new Thread(new Runnable() {
             @Override
             public void run() {
                 ProjectLib.Message msg = new ProjectLib.Message(dest, info.getBytes());
 
-                globalReplyList.put(info, false);
+                globalReplyList.put(info, new AtomicBoolean(false));
                 PL.sendMessage(msg);
 
                 while (true){
-                    boolean isReply = globalReplyList.get(info);
-                    if (isReply){
-                        // if it is a ASK msg, then count the txn consensusCnt, and act
-                        if (info.action == Information.actionType.ASK){
-                            Transaction curtTxn = transactionMap.get(info.filename);
-                            final int replyCnt = curtTxn.consensusCnt.incrementAndGet();
-                            if (replyCnt == curtTxn.nodeCnt){
-                                arbitrate(curtTxn);
-                            }
-                        }
-                        // remove this information from globalMsgQueue
-                        globalReplyList.remove(info);
+                    AtomicBoolean isReply = globalReplyList.get(info);
+                    if (isReply.get()){
+                        // for the sake of dup msg, don't remove info out of globalReplyList
+                        // globalReplyList.remove(info);
                         break;
                     }
                 }
@@ -76,18 +81,26 @@ public class Server implements ProjectLib.CommitServing{
     }
 
 
-    public void arbitrate(Transaction txn){
+    public static void arbitrate(Transaction txn){
         boolean consensus = true;
         for (boolean curtReply : txn.answerList.values()){
             consensus &= curtReply;
             if (!consensus){ break; }
         }
-        if (consensus) { // if yes
-            // commit
-
-
-        }else {          // if no
-            // release
+        if (consensus) { // if yes, commit
+            txn.status = Transaction.TXNStatus.COMMIT;
+            commit(txn);
+            // pre-write file
+            try {
+                FileOutputStream out = new FileOutputStream(txn.filename);
+                out.write(txn.img);
+                out.close();
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+        }else { // if no, release
+            txn.status = Transaction.TXNStatus.ABORT;
+            abort(txn);
         }
     }
 
@@ -95,7 +108,7 @@ public class Server implements ProjectLib.CommitServing{
      * tell each node to delete the resources.
      * @param txn
      */
-    public void commit(Transaction txn){
+    public static void commit(Transaction txn){
         for (Map.Entry<Transaction.Source, Boolean> entry : txn.answerList.entrySet()){
             String curtNode = entry.getKey().node;
             String curtComponent = entry.getKey().node;
@@ -105,7 +118,7 @@ public class Server implements ProjectLib.CommitServing{
         }
     }
 
-    public void abort(Transaction txn) {
+    public static void abort(Transaction txn) {
         for (Map.Entry<Transaction.Source, Boolean> entry : txn.answerList.entrySet()) {
             // only notify those who say yes
             if (entry.getValue().equals(false)){
@@ -141,13 +154,46 @@ public class Server implements ProjectLib.CommitServing{
 		while (true) {
 			ProjectLib.Message msg = PL.getMessage();
 			System.out.println( "Server: Got message from " + msg.addr );
-
-
-            ProjectLib.Message a = PL.getMessage();
-
+            processMsg(msg);
 		}
 	}
 
-    public
+
+    /**
+     *
+     * @param msg
+     */
+    public static void processMsg(ProjectLib.Message msg){
+        String node = msg.addr;
+        Information info = new Information(msg.body);
+        globalReplyList.get(info).set(true);
+
+        Transaction txn = transactionMap.get(info.filename);
+        if (info.action == Information.actionType.ASK){
+            // if it is a ASK msg, then count the txn consensusCnt, and act
+            // msg.addr = info.node;
+            txn.answerList.put(new Transaction.Source(msg.addr, info.component), info.reply);
+            final int replyCnt = txn.consensusCnt.incrementAndGet();
+            if (replyCnt == txn.nodeCnt){
+                arbitrate(txn);
+                // reset and go to next step: COMMIT or ABORT
+                txn.consensusCnt.set(0);
+                txn.answerList.clear();
+            }
+
+        // receive commit ack
+        }else if (info.action == Information.actionType.COMMIT || info.action == Information.actionType.ABORT){
+            // pre-write has already been conducted
+            // txn.Status must be COMMIT
+            // msg.addr = info.node;
+            final int replyCnt = txn.consensusCnt.incrementAndGet();
+            if (replyCnt == txn.nodeCnt){
+                txn.consensusCnt.set(0);
+                txn.answerList.clear();
+                transactionMap.remove(txn);
+            }
+        }
+    }
+
 }
 
