@@ -18,6 +18,7 @@ public class Server implements ProjectLib.CommitServing{
     public static ConcurrentHashMap<Information, AtomicBoolean> globalReplyList = new ConcurrentHashMap<>();
 
 	public void startCommit( String filename, byte[] img, String[] sources ) {
+        System.out.println("LOOKHERE..." + img.length);
         AtomicInteger reply = new AtomicInteger(0);
 		System.out.println( "Server: Got request to commit "+filename );
         int num = sources.length;
@@ -28,7 +29,6 @@ public class Server implements ProjectLib.CommitServing{
         for (int i = 0; i < num; ++i){
             String str = sources[i];
             int delimeterIdx = str.indexOf(":");
-
             String node = str.substring(0, delimeterIdx);
             String component = str.substring(delimeterIdx+1);
 
@@ -110,9 +110,9 @@ public class Server implements ProjectLib.CommitServing{
     public static void commit(Transaction txn){
         for (Map.Entry<Transaction.Source, Boolean> entry : txn.answerList.entrySet()){
             String curtNode = entry.getKey().node;
-            String curtComponent = entry.getKey().node;
+            String curtComponent = entry.getKey().component;
             Information info = new Information(txn.txnId, "COMMIT", txn.filename, curtNode, curtComponent);
-            blockingSendMsg(curtComponent, info);
+            blockingSendMsg(curtNode, info);
 
         }
     }
@@ -124,9 +124,9 @@ public class Server implements ProjectLib.CommitServing{
                continue;
             }
             String curtNode = entry.getKey().node;
-            String curtComponent = entry.getKey().node;
+            String curtComponent = entry.getKey().component;
             Information info = new Information(txn.txnId, "ABORT", txn.filename, curtNode, curtComponent);
-            blockingSendMsg(curtComponent, info);
+            blockingSendMsg(curtNode, info);
         }
     }
 
@@ -175,8 +175,8 @@ public class Server implements ProjectLib.CommitServing{
             // msg.addr = info.node;
             final int replyCnt = txn.consensusCnt.incrementAndGet();
             if (replyCnt == txn.nodeCnt){
-                txn.consensusCnt.set(0);
-                txn.answerList.clear();
+//                txn.consensusCnt.set(0);
+//                txn.answerList.clear();
                 transactionMap.remove(txn);
             }
         }

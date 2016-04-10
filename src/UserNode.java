@@ -53,21 +53,30 @@ public class UserNode implements ProjectLib.MessageHandling {
                 ArrayList<String> compList = new ArrayList<>();
                 fileLock.writeLock().lock();
                 for (String curtComp : comps) {
+                    System.out.println( myId + ": process ASK. txnid:" + info.txnID + " filename:" + info.filename + " curtComps:" + curtComp);
                     if (!imagesStatus.containsKey(curtComp) || imagesStatus.get(curtComp) != 0) {
                         ret = false;
                         break;
                     }
                     compList.add(curtComp);
                 }
-                if (ret && PL.askUser(info.img, comps)) {
-                    lockFile(info.txnID, compList);
-                    reply.reply = true;
+
+//                if (ret && PL.askUser(info.img, comps)) {
+                if (ret){
+                    boolean askRet = PL.askUser(info.img, comps);
+                    if (askRet) {
+                        lockFile(info.txnID, compList);
+                        System.out.println( myId + ": process ASK. txnid:" + info.txnID + " filename:" + info.filename + " user accept");
+                        reply.reply = true;
+                    }else{
+                        System.out.println( myId + ": process ASK. txnid:" + info.txnID + " filename:" + info.filename + " user refuse");
+                        reply.reply = false;
+                    }
                 } else {
+                    System.out.println( myId + ": process ASK. txnid:" + info.txnID + " filename:" + info.filename + " file not exists or is locked");
                     reply.reply = false;
-                    compList.clear();
                 }
                 fileLock.writeLock().unlock();
-//                System.out.println(myId + ": processMsg() : " + info.img);
                 blockingSendMsg(reply, this.myId);
             } else if (info.action == Information.actionType.COMMIT) {
                 System.out.println( myId + ": process COMMIT. txnid:" + info.txnID + " filename:" + info.filename);
@@ -95,11 +104,16 @@ public class UserNode implements ProjectLib.MessageHandling {
     }
 
     public void deleteFile(int txnid){
+        System.out.println( myId + ": txnid:" + txnid + " in delete.");
         ArrayList<String> comps = lockedFiles.get(txnid);
         for (String curtComp : comps){
             imagesStatus.remove(curtComp);
             File fileToDelete = new File(curtComp);
             fileToDelete.delete();
+            System.out.println( myId + ": txnid:" + txnid + " delete filename:" +curtComp);
+            if (fileToDelete.exists()){
+                System.out.println("HELP!!!!!!!!!!!!");
+            }
         }
         lockedFiles.remove(txnid);
     }
@@ -118,7 +132,7 @@ public class UserNode implements ProjectLib.MessageHandling {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                System.out.println(myID + " : send msg to server to " + info.action + " txnid:" + info.txnID + " filename:" + info.filename + " reply:"+ info.reply) ;
+                System.out.println(myID + " : send msg to server to " + info.action + " txnid:" + info.txnID + " filename:" + info.filename + "comps: " + info.componentStr + " reply:"+ info.reply) ;
 //                System.out.println(myID + " : send msg to server : " + info.toString());
                 ProjectLib.Message msg = new ProjectLib.Message("Server", info.getBytes());
                 globalReplyList.put(info, new AtomicBoolean(false));

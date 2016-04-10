@@ -68,7 +68,7 @@ public class Information {
         this.reply = false;
         this.img = null;
 
-        Collections.sort(components);
+//        Collections.sort(components);
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < components.size(); ++i){
             String curtComp = components.get(i);
@@ -85,17 +85,25 @@ public class Information {
     // will only get img[] when reveice ack of inquiry
     // deserialization.
     Information(byte[] bytes){
+        int plusIdx = 0;
+        //todo: hardcode 100
+        for (plusIdx = 0; plusIdx < bytes.length; ++plusIdx){
+            if(bytes[plusIdx] == 43){ // plus
+                break;
+            }
+        }
+
         String value = new String(bytes);
 //        System.out.println("init Information from byte[] : " + value);
         String [] parts = null;
-        int idx = -1;
         try{
-            idx = value.indexOf("+");
-            if (idx != -1) { // img is null
-                value = value.substring(0, idx);
+            System.out.println("idx pos:" + plusIdx);
+            if (plusIdx == bytes.length) { // img is null
+                System.out.println("******************BAOJING!!!!!!!!!");
+                value = value.substring(0, plusIdx);
             }
             parts = value.split(":");
-            if (parts.length != 6) {
+            if (parts.length < 6) {
                 System.out.print(value);
                 throw new Exception("Error Bytes to construct Information");
             }
@@ -110,12 +118,15 @@ public class Information {
         this.componentStr = parts[4];
         this.reply = Boolean.valueOf(parts[5]);
 
-        if (idx != -1) {
-            this.img = new byte[bytes.length - idx];
-            img = Arrays.copyOfRange(bytes, idx, bytes.length - 1);
+        //if (plusIdx != bytes.length ) {
+        // note: can't equal! then img is null!
+        if (plusIdx < bytes.length-1){
+            this.img = new byte[bytes.length - plusIdx];
+            this.img = Arrays.copyOfRange(bytes, plusIdx, bytes.length - 1);
+            System.out.println("LOOKHERE2..." + img.length);
 //            System.out.println("init Information image : " + img);
         } else {
-            img = null;
+            this.img = null;
 //            System.out.println("init Information image : " + null);
         }
 
@@ -155,15 +166,23 @@ public class Information {
         // action : filename : node: component : reply + byte[] img
         sb.append(this.txnID).append(":").append(actionStr).append(":").append(this.filename).append(":");
         sb.append(this.node).append(":");
-        sb.append(componentStr).append(":").append(this.reply);
-        if (this.img != null){
-            sb.append("+").append(img);
-        }
+        sb.append(componentStr).append(":").append(this.reply).append("+");
+//        if (this.img != null){
+//            sb.append("+").append(img);
+//        }
         return sb.toString();
     }
 
     public byte[] getBytes(){
-        return this.toString().getBytes();
+        byte[] tmp = this.toString().getBytes();
+        byte[] ret = tmp;
+        if (img != null) {
+            int lenSum = tmp.length + this.img.length;
+            ret = new byte[lenSum];
+            System.arraycopy(tmp, 0, ret, 0, tmp.length);
+            System.arraycopy(this.img, 0, ret, tmp.length, this.img.length);
+        }
+        return ret;
     }
 
     public static actionType valueOf(String actionStr){
