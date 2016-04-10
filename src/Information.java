@@ -74,10 +74,11 @@ public class Information {
             String curtComp = components.get(i);
             if (i == 0)
                 sb.append(curtComp);
-            else
+           else
                 sb.append("&").append(curtComp);
         }
         this.componentStr = sb.toString();
+        System.out.println("============================== id:" + id + " of node: " + node + " with: " + this.componentStr);
         this.img = img;
     }
 
@@ -85,16 +86,19 @@ public class Information {
     // deserialization.
     Information(byte[] bytes){
         String value = new String(bytes);
-        int idx = value.indexOf("+");
-        if (idx != -1) { // img is null
-            value = value.substring(0, idx);
-        }
-        String[] parts = value.split(":");
+        System.out.println("init Information from byte[] : " + value);
+        String [] parts = null;
+        int idx = -1;
         try{
-        if (parts.length != 6) {
-            System.out.print(value);
-            throw new Exception("Error Bytes to construct Information");
-        }
+            idx = value.indexOf("+");
+            if (idx != -1) { // img is null
+                value = value.substring(0, idx);
+            }
+            parts = value.split(":");
+            if (parts.length != 6) {
+                System.out.print(value);
+                throw new Exception("Error Bytes to construct Information");
+            }
         }catch (Exception e){
             e.printStackTrace();
         }
@@ -109,8 +113,10 @@ public class Information {
         if (idx != -1) {
             this.img = new byte[bytes.length - idx];
             img = Arrays.copyOfRange(bytes, idx, bytes.length - 1);
+//            System.out.println("init Information image : " + img);
         } else {
             img = null;
+//            System.out.println("init Information image : " + null);
         }
 
     }

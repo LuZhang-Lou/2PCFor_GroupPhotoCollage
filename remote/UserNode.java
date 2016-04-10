@@ -7,15 +7,19 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class UserNode implements ProjectLib.MessageHandling {
     public ConcurrentHashMap<String, Integer> imagesStatus;
     public ConcurrentHashMap<Integer, ArrayList<String>> lockedFiles;
-    public static ConcurrentHashMap<Information, AtomicBoolean> globalReplyList = new ConcurrentHashMap<>();
-
+    public ConcurrentHashMap<Information, AtomicBoolean> globalReplyList;
+    public ReentrantReadWriteLock fileLock;
 	public final String myId;
+
     public static ProjectLib PL;
     public static UserNode UN;
-    public static ReentrantReadWriteLock fileLock = new ReentrantReadWriteLock();
+
 	public UserNode( String id ) {
 		myId = id;
         imagesStatus = new ConcurrentHashMap<>();
+        lockedFiles = new ConcurrentHashMap<>();
+        globalReplyList = new ConcurrentHashMap<>();
+        fileLock = new ReentrantReadWriteLock();
 
         final File home = new File(".");
         for (final File fileEntry : home.listFiles()) {
@@ -41,38 +45,43 @@ public class UserNode implements ProjectLib.MessageHandling {
 	}
 
     public void processMsg(Information info){
-        Information reply = new Information(info);
-        if (info.action == Information.actionType.ASK){
-            String[] comps = info.componentStr.split("&");
-            boolean ret = true;
-            ArrayList<String> compList = new ArrayList<>();
-            fileLock.writeLock().lock();
-            for (String curtComp : comps){
-                if (!imagesStatus.containsKey(curtComp) || imagesStatus.get(curtComp) != 0){
-                    ret = false;
-                    break;
+        try {
+            Information reply = new Information(info);
+            if (info.action == Information.actionType.ASK) {
+                String[] comps = info.componentStr.split("&");
+                boolean ret = true;
+                ArrayList<String> compList = new ArrayList<>();
+                fileLock.writeLock().lock();
+                for (String curtComp : comps) {
+                    if (!imagesStatus.containsKey(curtComp) || imagesStatus.get(curtComp) != 0) {
+                        ret = false;
+                        break;
+                    }
+                    compList.add(curtComp);
                 }
-                compList.add(curtComp);
+                if (ret && PL.askUser(info.img, comps)) {
+                    lockFile(info.txnID, compList);
+                    reply.reply = true;
+                } else {
+                    reply.reply = false;
+                    compList.clear();
+                }
+                fileLock.writeLock().unlock();
+                System.out.println(myId + ": processMsg() : " + info.img);
+                blockingSendMsg(reply, this.myId);
+            } else if (info.action == Information.actionType.COMMIT) {
+                fileLock.writeLock().lock();
+                deleteFile(info.txnID);
+                fileLock.writeLock().unlock();
+                blockingSendMsg(reply, this.myId);
+            } else if (info.action == Information.actionType.ABORT) {
+                fileLock.writeLock().lock();
+                releaseHold(info.txnID);
+                fileLock.writeLock().unlock();
+                blockingSendMsg(reply, this.myId);
             }
-            if (ret && PL.askUser(info.img, comps)){
-                lockFile(info.txnID, compList);
-                reply.reply = true;
-            }else{
-                reply.reply = false;
-                compList.clear();
-            }
-            fileLock.writeLock().unlock();
-            blockingSendMsg(reply);
-        } else if (info.action == Information.actionType.COMMIT){
-            fileLock.writeLock().lock();
-            deleteFile(info.txnID);
-            fileLock.writeLock().unlock();
-            blockingSendMsg(reply);
-        } else if (info.action == Information.actionType.ABORT){
-            fileLock.writeLock().lock();
-            releaseHold(info.txnID);
-            fileLock.writeLock().unlock();
-            blockingSendMsg(reply);
+        }catch (Exception e){
+            e.printStackTrace();
         }
     }
 
@@ -103,10 +112,12 @@ public class UserNode implements ProjectLib.MessageHandling {
 
 
     // todo : add flag to indicate whether to wait for ack?
-    public static void blockingSendMsg(Information info){
+    public void blockingSendMsg(Information info, String myID){
         new Thread(new Runnable() {
             @Override
             public void run() {
+                System.out.println(myID + " : send msg to server to " + info.action);
+                System.out.println(myID + " : send msg to server : " + info.toString());
                 ProjectLib.Message msg = new ProjectLib.Message("Server", info.getBytes());
                 globalReplyList.put(info, new AtomicBoolean(false));
                 PL.sendMessage(msg);

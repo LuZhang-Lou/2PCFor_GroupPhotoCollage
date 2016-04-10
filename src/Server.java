@@ -30,7 +30,7 @@ public class Server implements ProjectLib.CommitServing{
             int delimeterIdx = str.indexOf(":");
 
             String node = str.substring(0, delimeterIdx);
-            String component = str.substring(delimeterIdx);
+            String component = str.substring(delimeterIdx+1);
 
             if (localSourceMap.containsKey(node)){
                 ArrayList<String> components = localSourceMap.get(node);
@@ -58,8 +58,9 @@ public class Server implements ProjectLib.CommitServing{
         new Thread(new Runnable() {
             @Override
             public void run() {
+                System.out.println("Sever: send msg to " + dest + " to " + info.action);
+                System.out.println("Sever: send msg to " + dest + " : " + info.toString());
                 ProjectLib.Message msg = new ProjectLib.Message(dest, info.getBytes());
-
                 globalReplyList.put(info, new AtomicBoolean(false));
                 PL.sendMessage(msg);
 
@@ -77,6 +78,7 @@ public class Server implements ProjectLib.CommitServing{
 
 
     public static void arbitrate(Transaction txn){
+        System.out.println("Time to arbitrate. " + "txnid:" + txn.txnId + " filename:"+ txn.filename);
         boolean consensus = true;
         for (boolean curtReply : txn.answerList.values()){
             consensus &= curtReply;
@@ -89,6 +91,7 @@ public class Server implements ProjectLib.CommitServing{
             try {
                 FileOutputStream out = new FileOutputStream(txn.filename);
                 out.write(txn.img);
+                System.out.println("Prewrite finished. " + "txnid:" + txn.txnId + " filename:"+ txn.filename);
                 out.close();
             }catch (Exception e){
                 e.printStackTrace();
