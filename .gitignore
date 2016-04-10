@@ -3,6 +3,8 @@ ompiled source #
 remote/*
 remoteTest/*
 test/*
+*.tgz
+mytest/*
 *.com
 *.class
 *.dll
