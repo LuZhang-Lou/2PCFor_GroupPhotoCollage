@@ -78,7 +78,7 @@ public class Information {
                 sb.append("&").append(curtComp);
         }
         this.componentStr = sb.toString();
-        System.out.println("============================== id:" + id + " of node: " + node + " with: " + this.componentStr);
+//        System.out.println("============================== id:" + id + " of node: " + node + " with: " + this.componentStr);
         this.img = img;
     }
 
@@ -86,7 +86,7 @@ public class Information {
     // deserialization.
     Information(byte[] bytes){
         String value = new String(bytes);
-        System.out.println("init Information from byte[] : " + value);
+//        System.out.println("init Information from byte[] : " + value);
         String [] parts = null;
         int idx = -1;
         try{

@@ -58,8 +58,8 @@ public class Server implements ProjectLib.CommitServing{
         new Thread(new Runnable() {
             @Override
             public void run() {
-                System.out.println("Sever: send msg to " + dest + " to " + info.action);
-                System.out.println("Sever: send msg to " + dest + " : " + info.toString());
+                System.out.println("Server: send msg to " + dest + " to " + info.action + " id:" + info.txnID + " filename: "+ info.filename + " comps:" + info.componentStr);
+//                System.out.println("Sever: send msg to " + dest + " : " + info.toString());
                 ProjectLib.Message msg = new ProjectLib.Message(dest, info.getBytes());
                 globalReplyList.put(info, new AtomicBoolean(false));
                 PL.sendMessage(msg);
@@ -78,7 +78,7 @@ public class Server implements ProjectLib.CommitServing{
 
 
     public static void arbitrate(Transaction txn){
-        System.out.println("Time to arbitrate. " + "txnid:" + txn.txnId + " filename:"+ txn.filename);
+//        System.out.println("Time to arbitrate. " + "txnid:" + txn.txnId + " filename:"+ txn.filename);
         boolean consensus = true;
         for (boolean curtReply : txn.answerList.values()){
             consensus &= curtReply;
@@ -86,17 +86,18 @@ public class Server implements ProjectLib.CommitServing{
         }
         if (consensus) { // if yes, commit
             txn.status = Transaction.TXNStatus.COMMIT;
+            System.out.println("Server: txn: " + txn.txnId + " commit. filename: " + txn.filename);
             commit(txn);
             // pre-write file
             try {
                 FileOutputStream out = new FileOutputStream(txn.filename);
                 out.write(txn.img);
-                System.out.println("Prewrite finished. " + "txnid:" + txn.txnId + " filename:"+ txn.filename);
                 out.close();
             }catch (Exception e){
                 e.printStackTrace();
             }
         }else { // if no, release
+            System.out.println("Server: txn: " + txn.txnId + " abort. filename: " + txn.filename);
             txn.status = Transaction.TXNStatus.ABORT;
             abort(txn);
         }
@@ -138,7 +139,7 @@ public class Server implements ProjectLib.CommitServing{
 		// main loop
 		while (true) {
 			ProjectLib.Message msg = PL.getMessage();
-			System.out.println( "Server: Got message from " + msg.addr );
+//			System.out.println( "Server: Got message from " + msg.addr );
             processMsg(msg);
 		}
 	}
@@ -153,6 +154,7 @@ public class Server implements ProjectLib.CommitServing{
         Information info = new Information(msg.body);
         globalReplyList.get(info).set(true);
 
+        System.out.println("Server: process reply " + info.action + " txnID:" + info.txnID + "from node:" + msg.addr + " filename:" + info.filename + " reply: " + info.reply);
         Transaction txn = transactionMap.get(info.filename);
         if (info.action == Information.actionType.ASK){
             // if it is a ASK msg, then count the txn consensusCnt, and act

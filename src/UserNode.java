@@ -32,7 +32,6 @@ public class UserNode implements ProjectLib.MessageHandling {
 	}
 
 	public boolean deliverMessage( ProjectLib.Message msg ) {
-		System.out.println( myId + ": Got message from " + msg.addr );
         Information info = new Information(msg.body);
         processMsg(info);
 		return true;
@@ -48,6 +47,7 @@ public class UserNode implements ProjectLib.MessageHandling {
         try {
             Information reply = new Information(info);
             if (info.action == Information.actionType.ASK) {
+                System.out.println( myId + ": process ASK. txnid:" + info.txnID + " filename:" + info.filename + " comps:" + info.componentStr);
                 String[] comps = info.componentStr.split("&");
                 boolean ret = true;
                 ArrayList<String> compList = new ArrayList<>();
@@ -67,14 +67,16 @@ public class UserNode implements ProjectLib.MessageHandling {
                     compList.clear();
                 }
                 fileLock.writeLock().unlock();
-                System.out.println(myId + ": processMsg() : " + info.img);
+//                System.out.println(myId + ": processMsg() : " + info.img);
                 blockingSendMsg(reply, this.myId);
             } else if (info.action == Information.actionType.COMMIT) {
+                System.out.println( myId + ": process COMMIT. txnid:" + info.txnID + " filename:" + info.filename);
                 fileLock.writeLock().lock();
                 deleteFile(info.txnID);
                 fileLock.writeLock().unlock();
                 blockingSendMsg(reply, this.myId);
             } else if (info.action == Information.actionType.ABORT) {
+                System.out.println( myId + ": process ABORT. txnid:" + info.txnID + " filename:" + info.filename);
                 fileLock.writeLock().lock();
                 releaseHold(info.txnID);
                 fileLock.writeLock().unlock();
@@ -116,8 +118,8 @@ public class UserNode implements ProjectLib.MessageHandling {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                System.out.println(myID + " : send msg to server to " + info.action);
-                System.out.println(myID + " : send msg to server : " + info.toString());
+                System.out.println(myID + " : send msg to server to " + info.action + " txnid:" + info.txnID + " filename:" + info.filename + " reply:"+ info.reply) ;
+//                System.out.println(myID + " : send msg to server : " + info.toString());
                 ProjectLib.Message msg = new ProjectLib.Message("Server", info.getBytes());
                 globalReplyList.put(info, new AtomicBoolean(false));
                 PL.sendMessage(msg);
