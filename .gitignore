@@ -2,6 +2,7 @@ ompiled source #
 ###################
 remote/*
 remoteTest/*
+test/*
 *.com
 *.class
 *.dll
