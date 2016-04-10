@@ -92,7 +92,6 @@ public class Information {
         String[] parts = value.split(":");
         try{
         if (parts.length != 6) {
-            System.out.print(value);
             throw new Exception("Error Bytes to construct Information");
         }
         }catch (Exception e){
