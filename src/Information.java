@@ -1,5 +1,6 @@
 import org.omg.PortableInterceptor.INACTIVE;
 
+import java.io.FileOutputStream;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -97,9 +98,9 @@ public class Information {
 //        System.out.println("init Information from byte[] : " + value);
         String [] parts = null;
         try{
-            System.out.println("idx pos:" + plusIdx);
-            if (plusIdx == bytes.length) { // img is null
-                System.out.println("******************BAOJING!!!!!!!!!");
+//            System.out.println("idx pos:" + plusIdx);
+            if (plusIdx == bytes.length-1) { // img is null
+//                System.out.println("******************BAOJING!!!!!!!!!");
                 value = value.substring(0, plusIdx);
             }
             parts = value.split(":");
@@ -120,14 +121,12 @@ public class Information {
 
         //if (plusIdx != bytes.length ) {
         // note: can't equal! then img is null!
-        if (plusIdx < bytes.length-1){
-            this.img = new byte[bytes.length - plusIdx];
-            this.img = Arrays.copyOfRange(bytes, plusIdx, bytes.length - 1);
+        if ((plusIdx+1) <= bytes.length-1){
+            this.img = new byte[bytes.length - (plusIdx+1)];
+            this.img = Arrays.copyOfRange(bytes, plusIdx+1, bytes.length);
             System.out.println("LOOKHERE2..." + img.length);
-//            System.out.println("init Information image : " + img);
         } else {
             this.img = null;
-//            System.out.println("init Information image : " + null);
         }
 
     }

@@ -53,7 +53,7 @@ public class UserNode implements ProjectLib.MessageHandling {
                 ArrayList<String> compList = new ArrayList<>();
                 fileLock.writeLock().lock();
                 for (String curtComp : comps) {
-                    System.out.println( myId + ": process ASK. txnid:" + info.txnID + " filename:" + info.filename + " curtComps:" + curtComp);
+//                    System.out.println( myId + ": process ASK. txnid:" + info.txnID + " filename:" + info.filename + " curtComps:" + curtComp);
                     if (!imagesStatus.containsKey(curtComp) || imagesStatus.get(curtComp) != 0) {
                         ret = false;
                         break;
