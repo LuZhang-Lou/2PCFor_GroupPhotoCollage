@@ -7,9 +7,10 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class UserNode implements ProjectLib.MessageHandling {
     public ConcurrentHashMap<String, Integer> imagesStatus;
     public ConcurrentHashMap<Integer, ArrayList<String>> lockedFiles;
-    public ConcurrentHashMap<Information, AtomicBoolean> globalReplyList;
+//    public ConcurrentHashMap<Information, AtomicBoolean> globalReplyList;
     public ReentrantReadWriteLock fileLock;
 	public final String myId;
+//    public static final long DropThreshold = 6100;
 
     public static ProjectLib PL;
     public static UserNode UN;
@@ -18,7 +19,7 @@ public class UserNode implements ProjectLib.MessageHandling {
 		myId = id;
         imagesStatus = new ConcurrentHashMap<>();
         lockedFiles = new ConcurrentHashMap<>();
-        globalReplyList = new ConcurrentHashMap<>();
+//        globalReplyList = new ConcurrentHashMap<>();
         fileLock = new ReentrantReadWriteLock();
 
         final File home = new File(".");
@@ -47,13 +48,16 @@ public class UserNode implements ProjectLib.MessageHandling {
         try {
             Information reply = new Information(info);
             if (info.action == Information.actionType.ASK) {
+                // assume one txn one ASK msg.
+                if (lockedFiles.containsKey(info.txnID)){
+                    System.out.println("!!!!!!!!!!!!!!call the police!!!!!!!!!!!!!!");
+                }
                 System.out.println( myId + ": process ASK. txnid:" + info.txnID + " filename:" + info.filename + " comps:" + info.componentStr);
                 String[] comps = info.componentStr.split("&");
                 boolean ret = true;
                 ArrayList<String> compList = new ArrayList<>();
                 fileLock.writeLock().lock();
                 for (String curtComp : comps) {
-//                    System.out.println( myId + ": process ASK. txnid:" + info.txnID + " filename:" + info.filename + " curtComps:" + curtComp);
                     if (!imagesStatus.containsKey(curtComp) || imagesStatus.get(curtComp) != 0) {
                         ret = false;
                         break;
@@ -61,7 +65,6 @@ public class UserNode implements ProjectLib.MessageHandling {
                     compList.add(curtComp);
                 }
 
-//                if (ret && PL.askUser(info.img, comps)) {
                 if (ret){
                     boolean askRet = PL.askUser(info.img, comps);
                     if (askRet) {
@@ -77,19 +80,29 @@ public class UserNode implements ProjectLib.MessageHandling {
                     reply.reply = false;
                 }
                 fileLock.writeLock().unlock();
-                blockingSendMsg(reply, this.myId);
+                sendMsg(reply, this.myId);
             } else if (info.action == Information.actionType.COMMIT) {
-                System.out.println( myId + ": process COMMIT. txnid:" + info.txnID + " filename:" + info.filename);
+                // might get duplicate commit msg.
                 fileLock.writeLock().lock();
-                deleteFile(info.txnID);
+                if (lockedFiles.containsKey(info.txnID) == false){ // dup msg, resend
+                    System.out.println( myId + ": receive dup COMMIT msg. txnid:" + info.txnID + " filename:" + info.filename + "resend..");
+                }else { // get this msg first time, process and send reply
+                    System.out.println(myId + ": process COMMIT. txnid:" + info.txnID + " filename:" + info.filename);
+                    deleteFile(info.txnID);
+                }
                 fileLock.writeLock().unlock();
-                blockingSendMsg(reply, this.myId);
+                sendMsg(reply, this.myId);
             } else if (info.action == Information.actionType.ABORT) {
-                System.out.println( myId + ": process ABORT. txnid:" + info.txnID + " filename:" + info.filename);
+                // might get duplicate commit msg.
                 fileLock.writeLock().lock();
-                releaseHold(info.txnID);
+                if (lockedFiles.containsKey(info.txnID) == false){
+                    System.out.println( myId + ": receive dup ABORT msg. txnid:" + info.txnID + " filename:" + info.filename + "resend..");
+                }else {
+                    System.out.println(myId + ": process ABORT. txnid:" + info.txnID + " filename:" + info.filename);
+                    releaseHold(info.txnID);
+                }
                 fileLock.writeLock().unlock();
-                blockingSendMsg(reply, this.myId);
+                sendMsg(reply, this.myId);
             }
         }catch (Exception e){
             e.printStackTrace();
@@ -126,29 +139,17 @@ public class UserNode implements ProjectLib.MessageHandling {
         lockedFiles.remove(txnid);
     }
 
-
-    // todo : add flag to indicate whether to wait for ack?
-    public void blockingSendMsg(Information info, String myID){
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                System.out.println(myID + " : send msg to server to " + info.action + " txnid:" + info.txnID + " filename:" + info.filename + "comps: " + info.componentStr + " reply:"+ info.reply) ;
-//                System.out.println(myID + " : send msg to server : " + info.toString());
-                ProjectLib.Message msg = new ProjectLib.Message("Server", info.getBytes());
-                globalReplyList.put(info, new AtomicBoolean(false));
-                PL.sendMessage(msg);
-
-                while (true){
-                    AtomicBoolean isReply = globalReplyList.get(info);
-                    if (isReply.get()){
-                        // for the sake of dup msg, don't remove info out of globalReplyList
-                        // globalReplyList.remove(info);
-                        break;
-                    }
-                }
-            }
-        }).start();
+    // usernode side don't have to keep track of whether server receive the msg.
+    // b.c. if the msg is dropped, server will resend msg.
+    public void sendMsg(Information info, String myID){
+        System.out.println(myID + " : send msg to server to " + info.action + " txnid:" + info.txnID + " filename:" + info.filename + "comps: " + info.componentStr + " reply:"+ info.reply) ;
+        ProjectLib.Message msg = new ProjectLib.Message("Server", info.getBytes());
+        PL.sendMessage(msg);
     }
+
+
+
+
 
 }
 

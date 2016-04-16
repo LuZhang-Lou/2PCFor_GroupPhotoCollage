@@ -16,6 +16,7 @@ public class Server implements ProjectLib.CommitServing{
     public static AtomicInteger lastTxnID = new AtomicInteger(1);
     public static ConcurrentHashMap<String, Transaction> transactionMap = new ConcurrentHashMap<>();
     public static ConcurrentHashMap<Information, AtomicBoolean> globalReplyList = new ConcurrentHashMap<>();
+    public static final long DropThreshold = 6100;
 
 	public void startCommit( String filename, byte[] img, String[] sources ) {
         System.out.println("LOOKHERE..." + img.length);
@@ -64,13 +65,37 @@ public class Server implements ProjectLib.CommitServing{
                 globalReplyList.put(info, new AtomicBoolean(false));
                 PL.sendMessage(msg);
 
-                while (true){
-                    AtomicBoolean isReply = globalReplyList.get(info);
-                    if (isReply.get()){
-                        // for the sake of dup msg, don't remove info out of globalReplyList
-                        // globalReplyList.remove(info);
-                        break;
+                try {
+                    long lastSendTime = System.currentTimeMillis();
+                    while (true) {
+                        AtomicBoolean isReply = globalReplyList.get(info);
+                        if (isReply.get()) {
+                            // for the sake of dup msg, don't remove info out of globalReplyList
+                            // globalReplyList.remove(info);
+                            break;
+                        }
+                        // if timeout
+                        if (System.currentTimeMillis() - lastSendTime > DropThreshold) {
+                            // if in phase1, timeout => no, then abort
+                            // assume in no way there will be race condition here and main's
+                            // getting message.
+                            if (info.action == Information.actionType.ASK) {
+                                Transaction txn = transactionMap.get(info.filename);
+                                System.out.println("Server: txn: " + txn.txnId + " abort. filename: " + txn.filename);
+                                txn.status = Transaction.TXNStatus.ABORT;
+                                abort(txn);
+                                txn.consensusCnt.set(0);
+                                txn.answerList.clear();
+                                break;
+                            }else { // in phase2, commit or abort. resend.
+                                PL.sendMessage(msg);
+                                lastSendTime = System.currentTimeMillis();
+                            }
+                        }
+                        Thread.sleep(50);
                     }
+                } catch (Exception e){
+                    e.printStackTrace();
                 }
             }
         }).start();
