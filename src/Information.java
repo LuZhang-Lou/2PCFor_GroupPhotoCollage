@@ -124,7 +124,7 @@ public class Information {
         if ((plusIdx+1) <= bytes.length-1){
             this.img = new byte[bytes.length - (plusIdx+1)];
             this.img = Arrays.copyOfRange(bytes, plusIdx+1, bytes.length);
-            System.out.println("LOOKHERE2..." + img.length);
+//            System.out.println("LOOKHERE2..." + img.length);
         } else {
             this.img = null;
         }

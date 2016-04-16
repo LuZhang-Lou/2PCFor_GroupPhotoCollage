@@ -16,10 +16,10 @@ public class Server implements ProjectLib.CommitServing{
     public static AtomicInteger lastTxnID = new AtomicInteger(1);
     public static ConcurrentHashMap<String, Transaction> transactionMap = new ConcurrentHashMap<>();
     public static ConcurrentHashMap<Information, AtomicBoolean> globalReplyList = new ConcurrentHashMap<>();
-    public static final long DropThreshold = 6100;
+    public static final long DropThreshold = 3000;
 
 	public void startCommit( String filename, byte[] img, String[] sources ) {
-        System.out.println("LOOKHERE..." + img.length);
+//        System.out.println("LOOKHERE..." + img.length);
         AtomicInteger reply = new AtomicInteger(0);
 		System.out.println( "Server: Got request to commit "+filename );
         int num = sources.length;
@@ -71,7 +71,9 @@ public class Server implements ProjectLib.CommitServing{
                         AtomicBoolean isReply = globalReplyList.get(info);
                         if (isReply.get()) {
                             // for the sake of dup msg, don't remove info out of globalReplyList
-                            // globalReplyList.remove(info);
+                            // update: no dup msg will server receive??
+                            // b.c. user will not actively resend message.
+                            globalReplyList.remove(info);
                             break;
                         }
                         // if timeout
@@ -81,11 +83,12 @@ public class Server implements ProjectLib.CommitServing{
                             // getting message.
                             if (info.action == Information.actionType.ASK) {
                                 Transaction txn = transactionMap.get(info.filename);
-                                System.out.println("Server: txn: " + txn.txnId + " abort. filename: " + txn.filename);
+                                System.out.println("Server: txn: " + txn.txnId + " time out. filename: " + txn.filename);
                                 txn.status = Transaction.TXNStatus.ABORT;
                                 abort(txn);
                                 txn.consensusCnt.set(0);
                                 txn.answerList.clear();
+                                globalReplyList.remove(info);
                                 break;
                             }else { // in phase2, commit or abort. resend.
                                 PL.sendMessage(msg);
@@ -143,11 +146,14 @@ public class Server implements ProjectLib.CommitServing{
     }
 
     public static void abort(Transaction txn) {
+        System.out.println("Server: abort txn " + txn.txnId);
         for (Map.Entry<Transaction.Source, Boolean> entry : txn.answerList.entrySet()) {
+            txn.
             // only notify those who say yes
-            if (entry.getValue().equals(false)){
-               continue;
-            }
+            // update: no, notify all.
+//            if (entry.getValue().equals(false)){
+//               continue;
+//            }
             String curtNode = entry.getKey().node;
             String curtComponent = entry.getKey().component;
             Information info = new Information(txn.txnId, "ABORT", txn.filename, curtNode, curtComponent);
@@ -179,7 +185,7 @@ public class Server implements ProjectLib.CommitServing{
         Information info = new Information(msg.body);
         globalReplyList.get(info).set(true);
 
-        System.out.println("Server: process reply " + info.action + " txnID:" + info.txnID + "from node:" + msg.addr + " filename:" + info.filename + " reply: " + info.reply);
+        System.out.println("Server: process reply " + info.action + " txnID:" + info.txnID + " from node:" + msg.addr + " filename:" + info.filename + " reply: " + info.reply);
         Transaction txn = transactionMap.get(info.filename);
         if (info.action == Information.actionType.ASK){
             // if it is a ASK msg, then count the txn consensusCnt, and act
