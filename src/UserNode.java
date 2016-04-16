@@ -142,7 +142,7 @@ public class UserNode implements ProjectLib.MessageHandling {
     // usernode side don't have to keep track of whether server receive the msg.
     // b.c. if the msg is dropped, server will resend msg.
     public void sendMsg(Information info, String myID){
-        System.out.println(myID + " : send msg to server to " + info.action + " txnid:" + info.txnID + " filename:" + info.filename + "comps: " + info.componentStr + " reply:"+ info.reply) ;
+        System.out.println(myID + ": send msg to server to " + info.action + " txnid:" + info.txnID + " filename:" + info.filename + "comps: " + info.componentStr + " reply:"+ info.reply) ;
         ProjectLib.Message msg = new ProjectLib.Message("Server", info.getBytes());
         PL.sendMessage(msg);
     }

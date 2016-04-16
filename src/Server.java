@@ -1,4 +1,5 @@
 
+
 import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,7 +26,7 @@ public class Server implements ProjectLib.CommitServing{
         int num = sources.length;
 
         HashMap<String, ArrayList<String>> localSourceMap = new HashMap<>();
-
+        ArrayList<String> localSourceList = new ArrayList<>();
         // extract nodes and components
         for (int i = 0; i < num; ++i){
             String str = sources[i];
@@ -40,10 +41,14 @@ public class Server implements ProjectLib.CommitServing{
                 ArrayList<String> components = new ArrayList<>();
                 components.add(component);
                 localSourceMap.put(node, components);
+                localSourceList.add(node);
             }
         }
         final int txnID = lastTxnID.getAndIncrement();
-        transactionMap.put(filename, new Transaction(txnID, filename, img, localSourceMap.size()));
+
+        transactionMap.put(filename, new Transaction(txnID, filename, img, localSourceMap.size(), localSourceList));
+
+        //txn.answerList.put(new Transaction.Source(msg.addr, info.componentStr), info.reply);
 
         // send inquiry to each component.
         for (Map.Entry<String, ArrayList<String>> entry : localSourceMap.entrySet()){
@@ -83,7 +88,7 @@ public class Server implements ProjectLib.CommitServing{
                             // getting message.
                             if (info.action == Information.actionType.ASK) {
                                 Transaction txn = transactionMap.get(info.filename);
-                                System.out.println("Server: txn: " + txn.txnId + " time out. filename: " + txn.filename);
+                                System.out.println("Server: txn: " + txn.txnId + " in phase 1 time out. => abort filename: " + txn.filename);
                                 txn.status = Transaction.TXNStatus.ABORT;
                                 abort(txn);
                                 txn.consensusCnt.set(0);
@@ -91,6 +96,7 @@ public class Server implements ProjectLib.CommitServing{
                                 globalReplyList.remove(info);
                                 break;
                             }else { // in phase2, commit or abort. resend.
+                                System.out.println("Server: txn: " + info.txnID + " in phase 2 time out. => resend  filename: " + info.filename);
                                 PL.sendMessage(msg);
                                 lastSendTime = System.currentTimeMillis();
                             }
@@ -141,22 +147,27 @@ public class Server implements ProjectLib.CommitServing{
             String curtComponent = entry.getKey().component;
             Information info = new Information(txn.txnId, "COMMIT", txn.filename, curtNode, curtComponent);
             blockingSendMsg(curtNode, info);
-
         }
     }
 
     public static void abort(Transaction txn) {
         System.out.println("Server: abort txn " + txn.txnId);
+        // notify those say yes
         for (Map.Entry<Transaction.Source, Boolean> entry : txn.answerList.entrySet()) {
-            txn.
-            // only notify those who say yes
-            // update: no, notify all.
-//            if (entry.getValue().equals(false)){
-//               continue;
-//            }
+            if (entry.getValue().equals(false)){
+               continue;
+            }
             String curtNode = entry.getKey().node;
-            String curtComponent = entry.getKey().component;
-            Information info = new Information(txn.txnId, "ABORT", txn.filename, curtNode, curtComponent);
+            Information info = new Information(txn.txnId, "ABORT", txn.filename, curtNode, "");
+            blockingSendMsg(curtNode, info);
+        }
+        // notify those haven't reply or dropped
+        for (Map.Entry<String, Boolean> entry : txn.ifAnswerList.entrySet()) {
+            if (entry.getValue().equals(true)){
+               continue;
+            }
+            String curtNode = entry.getKey();
+            Information info = new Information(txn.txnId, "ABORT", txn.filename, curtNode, "");
             blockingSendMsg(curtNode, info);
         }
     }
@@ -191,6 +202,7 @@ public class Server implements ProjectLib.CommitServing{
             // if it is a ASK msg, then count the txn consensusCnt, and act
             // msg.addr = info.node;
             txn.answerList.put(new Transaction.Source(msg.addr, info.componentStr), info.reply);
+            txn.ifAnswerList.put(msg.addr, true);
             final int replyCnt = txn.consensusCnt.incrementAndGet();
             if (replyCnt == txn.nodeCnt){
                 arbitrate(txn);

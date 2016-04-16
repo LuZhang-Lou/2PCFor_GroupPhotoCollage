@@ -1,6 +1,6 @@
+
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -17,16 +17,23 @@ public class Transaction {
     public int txnId;
     // key: node:component, value : the answer
     public ConcurrentHashMap<Source, Boolean> answerList;
+    public ConcurrentHashMap<String, Boolean> ifAnswerList;
 
-    Transaction(int id, String filename, byte[] img, int num){
+    Transaction(int id, String filename, byte[] img, int num, ArrayList<String> sources){
         this.txnId = id;
         this.filename = filename;
         this.status = TXNStatus.INQUIRY;
         consensusCnt = new AtomicInteger(0);
         this.answerList = new ConcurrentHashMap<>();
+        this.ifAnswerList = new ConcurrentHashMap<>();
+
+        for (String curSource : sources){
+            ifAnswerList.put(curSource, false);
+        }
         this.nodeCnt = num;
         this.img = img;
     }
+
 
     public static class Source{
         String node;
@@ -52,4 +59,5 @@ public class Transaction {
             return (this.node.equals(converted.node) && this.component.equals(converted.component));
         }
     }
+
 }
