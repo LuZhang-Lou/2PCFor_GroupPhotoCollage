@@ -4,7 +4,6 @@
     <list default="true" id="54e42199-80a9-45cc-8881-b303f5b1cb95" name="Default" comment="">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/Server.java" afterPath="$PROJECT_DIR$/src/Server.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/UserNode.java" afterPath="$PROJECT_DIR$/src/UserNode.java" />
     </list>
     <ignored path="15440-p4.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -44,8 +43,8 @@
           <file leaf-file-name="Server.java" pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/src/Server.java">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="235">
-                  <caret line="211" column="0" selection-start-line="211" selection-start-column="0" selection-end-line="211" selection-end-column="0" />
+                <state relative-caret-position="349">
+                  <caret line="242" column="20" selection-start-line="242" selection-start-column="20" selection-end-line="242" selection-end-column="20" />
                   <folding>
                     <element signature="imports" expanded="true" />
                   </folding>
@@ -93,8 +92,8 @@
                 <state relative-caret-position="235">
                   <caret line="89" column="26" selection-start-line="89" selection-start-column="26" selection-end-line="89" selection-end-column="26" />
                   <folding>
-                    <marker date="1460873670000" expanded="true" signature="3014:5753" placeholder="{...}" />
-                    <marker date="1460873670000" expanded="true" signature="3068:5743" placeholder="{...}" />
+                    <marker date="1460874516000" expanded="true" signature="3014:5753" placeholder="{...}" />
+                    <marker date="1460874516000" expanded="true" signature="3068:5743" placeholder="{...}" />
                   </folding>
                 </state>
               </provider>
@@ -663,12 +662,12 @@
       <workItem from="1460131361303" duration="45589000" />
       <workItem from="1460303982744" duration="880000" />
       <workItem from="1460774218350" duration="249000" />
-      <workItem from="1460818513168" duration="26879000" />
+      <workItem from="1460818513168" duration="27379000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="73940000" />
+    <option name="totallyTimeSpent" value="74440000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="0" width="1920" height="1200" extended-state="0" />
@@ -1051,8 +1050,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/Server.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="235">
-          <caret line="211" column="0" selection-start-line="211" selection-start-column="0" selection-end-line="211" selection-end-column="0" />
+        <state relative-caret-position="349">
+          <caret line="242" column="20" selection-start-line="242" selection-start-column="20" selection-end-line="242" selection-end-column="20" />
           <folding>
             <element signature="imports" expanded="true" />
           </folding>

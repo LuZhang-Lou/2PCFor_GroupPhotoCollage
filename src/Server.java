@@ -238,7 +238,11 @@ public class Server implements ProjectLib.CommitServing{
         System.out.println("Server: process reply " + info.action + " txnID:" + info.txnID + " from node:" + msg.addr + " filename:" + info.filename + " reply: " + info.reply);
         if (globalReplyList.containsKey(info)) {
             globalReplyList.get(info).set(true);
-        } // else, dropped msg, ignore
+        } // else, dropped ASK msg, ignore...
+        else {
+            System.out.println("Server: received dropped/ very delayed ask msg..., ignore");
+            return;
+        }
 
         Transaction txn = transactionMap.get(info.filename);
         if (info.action == Information.actionType.ASK){
