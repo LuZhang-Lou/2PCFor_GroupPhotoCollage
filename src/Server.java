@@ -218,8 +218,7 @@ public class Server implements ProjectLib.CommitServing{
         System.out.println("===================Server is up:");
 
         rollingback();
-
-
+        Runtime.getRuntime().addShutdownHook(new UserNode.CleanDirHelper());
         // main loop
 		while (true) {
 			ProjectLib.Message msg = PL.getMessage();
@@ -362,7 +361,7 @@ public class Server implements ProjectLib.CommitServing{
             for (String singleNode : components){
                 String [] innerParts = singleNode.split(":");
                 localSourceList.add(innerParts[0]);
-                System.out.println("Server: rooling back, find:" + innerParts +" involved in txn:" + txnID);
+                System.out.println("Server: rooling back, find:" + innerParts.toString() +" involved in txn:" + txnID);
             }
             Transaction txn =  new Transaction(txnID, filename, useless, components.length, localSourceList, status);
             transactionMap.put(filename, txn);
@@ -380,6 +379,32 @@ public class Server implements ProjectLib.CommitServing{
         recordFile.delete();
         if (recordFile.exists()){
             System.out.println("HELP!!!!!!!!!!!!!!!");
+        }
+    }
+
+    static class CleanDirHelper extends Thread{
+
+        public void run() {
+            // clean up dirs
+            final File home = new File(".");
+            for (final File fileEntry : home.listFiles()) {
+                if (fileEntry.isDirectory()){
+                    System.out.println("Service: rm dir:" + fileEntry.getName());
+                    rmDir(fileEntry);
+                }
+            }
+        }
+        private static boolean rmDir(File dir) {
+            if (dir.isDirectory()) {
+                String[] children = dir.list();
+                for (int i = 0; i < children.length; i++) {
+                    boolean ret = rmDir(new File(dir, children[i]));
+                    if (ret == false) {
+                        return false;
+                    }
+                }
+            }
+            return dir.delete();
         }
     }
 

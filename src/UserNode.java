@@ -47,7 +47,7 @@ public class UserNode implements ProjectLib.MessageHandling {
         if (args.length != 2) throw new Exception("Need 2 args: <port> <id>");
         UN = new UserNode(args[1]);
         PL = new ProjectLib(Integer.parseInt(args[0]), args[1], UN);
-        Runtime.getRuntime().addShutdownHook(new Message());
+        Runtime.getRuntime().addShutdownHook(new CleanDirHelper());
 
     }
 
@@ -281,7 +281,7 @@ public class UserNode implements ProjectLib.MessageHandling {
         }
     }
 
-    static class Message extends Thread{
+    static class CleanDirHelper extends Thread{
 
         public void run() {
             // clean up dirs
