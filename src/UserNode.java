@@ -17,6 +17,7 @@ public class UserNode implements ProjectLib.MessageHandling {
 
 	public UserNode( String id ) {
 		myId = id;
+        System.out.println("=================== user: " + myId + " is up:");
         imagesStatus = new ConcurrentHashMap<>();
         lockedFiles = new ConcurrentHashMap<>();
 //        globalReplyList = new ConcurrentHashMap<>();

@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class Transaction {
 
-    public enum TXNStatus {INQUIRY, ABORT, COMMIT};
+    public enum TXNStatus {INQUIRY, ABORT, COMMIT, FINISH};
     public String filename;
     public TXNStatus status;
     public AtomicInteger consensusCnt;
@@ -32,6 +32,11 @@ public class Transaction {
         }
         this.nodeCnt = num;
         this.img = img;
+    }
+
+    Transaction(int id, String filename, byte[] img, int num, ArrayList<String> sources, TXNStatus status) {
+        this(id, filename, img, num, sources);
+        this.status = status;
     }
 
 

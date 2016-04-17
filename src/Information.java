@@ -95,7 +95,6 @@ public class Information {
         }
 
         String value = new String(bytes);
-//        System.out.println("init Information from byte[] : " + value);
         String [] parts = null;
         try{
 //            System.out.println("idx pos:" + plusIdx);
