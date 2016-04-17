@@ -9,16 +9,22 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
-// todo: if memory is limited, can remove failed or commited txn from the transactionMap
 public class Server implements ProjectLib.CommitServing{
 
-    //todo: should it be static given that server might fail?
     public static ProjectLib PL;
     public static AtomicInteger lastTxnID = new AtomicInteger(1);
-    public static ConcurrentHashMap<String, Transaction> transactionMap = new ConcurrentHashMap<>();
-    public static ConcurrentHashMap<Information, AtomicBoolean> globalReplyList = new ConcurrentHashMap<>();
+    public static ConcurrentHashMap<String, Transaction> transactionMap =
+                                                new ConcurrentHashMap<>();
+    public static ConcurrentHashMap<Information, AtomicBoolean> globalReplyList =
+                                                new ConcurrentHashMap<>();
     public static final long DropThreshold = 3000;
 
+    /**
+     * start a transaction
+     * @param filename filename
+     * @param img      img content
+     * @param sources  img source list
+     */
 	public void startCommit( String filename, byte[] img, String[] sources ) {
         AtomicInteger reply = new AtomicInteger(0);
 		System.out.println( "Server: Got request to commit "+filename );
@@ -54,32 +60,40 @@ public class Server implements ProjectLib.CommitServing{
         }
         final int txnID = lastTxnID.getAndIncrement();
 
-
-        //logout
+        //log
         try {
             logHeader(txnID, filename, localSourceMap);
             logEvent(txnID, "START");
         }catch (Exception e){
             e.printStackTrace();
         }
-        transactionMap.put(filename, new Transaction(txnID, filename, img, localSourceMap.size(), localSourceList));
+        transactionMap.put(filename, new Transaction(txnID, filename, img,
+                                    localSourceMap.size(), localSourceList));
 
         // send inquiry to each component.
         for (Map.Entry<String, ArrayList<String>> entry : localSourceMap.entrySet()){
             String node = entry.getKey();
             ArrayList<String> components = entry.getValue();
-            Information inquiry = new Information(txnID, "ASK", filename, node, components, img);
+            Information inquiry = new Information
+                                (txnID, "ASK", filename, node, components, img);
             blockingSendMsg(node, inquiry);
         }
 
 	}
 
+    /**
+     * send blocking message and wait for receive
+     * @param dest destination
+     * @param info information body
+     */
     public static void blockingSendMsg(String dest, Information info){
         new Thread(new Runnable() {
             @Override
             public void run() {
-                System.out.println("Server: send msg to " + dest + " to " + info.action + " id:" + info.txnID + " filename: "+ info.filename + " comps:" + info.componentStr);
-//                System.out.println("Sever: send msg to " + dest + " : " + info.toString());
+                System.out.println("Server: send msg to " + dest + " to "
+                                    + info.action + " id:" + info.txnID
+                                    + " filename: "+ info.filename + " comps:"
+                                    + info.componentStr);
                 ProjectLib.Message msg = new ProjectLib.Message(dest, info.getBytes());
                 globalReplyList.put(info, new AtomicBoolean(false));
                 PL.sendMessage(msg);
@@ -89,20 +103,18 @@ public class Server implements ProjectLib.CommitServing{
                     while (true) {
                         AtomicBoolean isReply = globalReplyList.get(info);
                         if (isReply.get()) {
-                            // for the sake of dup msg, don't remove info out of globalReplyList
-                            // update: no dup msg will server receive??
-                            // b.c. user will not actively resend message.
                             globalReplyList.remove(info);
                             break;
                         }
                         // if timeout
                         if (System.currentTimeMillis() - lastSendTime > DropThreshold) {
                             // if in phase1, timeout => no, then abort
-                            // assume in no way there will be race condition here and main's
-                            // getting message.
                             if (info.action == Information.actionType.ASK) {
                                 Transaction txn = transactionMap.get(info.filename);
-                                System.out.println("Server: txn: " + txn.txnId + " in phase 1 dest:" + info.node + " time out. => abort filename: " + txn.filename);
+                                System.out.println("Server: txn: " + txn.txnId
+                                                    + " in phase 1 dest:" + info.node
+                                                    + " time out. => abort filename: "
+                                                    + txn.filename);
                                 txn.status = Transaction.TXNStatus.ABORT;
                                 abort(txn);
                                 txn.consensusCnt.set(0);
@@ -110,7 +122,10 @@ public class Server implements ProjectLib.CommitServing{
                                 globalReplyList.remove(info);
                                 break;
                             }else { // in phase2, commit or abort. resend.
-                                System.out.println("Server: txn: " + info.txnID + " in phase 2 dest:" + info.node + " time out. => resend  filename: " + info.filename);
+                                System.out.println("Server: txn: " + info.txnID
+                                                    + " in phase 2 dest:" + info.node
+                                                    + " time out. => resend  filename: "
+                                                    + info.filename);
                                 PL.sendMessage(msg);
                                 lastSendTime = System.currentTimeMillis();
                             }
@@ -125,8 +140,11 @@ public class Server implements ProjectLib.CommitServing{
     }
 
 
+    /**
+     * decide whether a txn commits or aborts
+     * @param txn transaction
+     */
     public static void arbitrate(Transaction txn){
-//        System.out.println("Time to arbitrate. " + "txnid:" + txn.txnId + " filename:"+ txn.filename);
         boolean consensus = true;
         for (boolean curtReply : txn.answerList.values()){
             consensus &= curtReply;
@@ -134,28 +152,20 @@ public class Server implements ProjectLib.CommitServing{
         }
         if (consensus) { // if yes, commit
             txn.status = Transaction.TXNStatus.COMMIT;
-            System.out.println("Server: txn: " + txn.txnId + " commit. filename: " + txn.filename);
+            System.out.println("Server: txn: " + txn.txnId + " commit. filename: "
+                                + txn.filename);
             commit(txn);
-            /*
-            // pre-write file
-            try {
-                FileOutputStream out = new FileOutputStream(txn.filename);
-                out.write(txn.img);
-                out.close();
-            }catch (Exception e){
-                e.printStackTrace();
-            }*/
-
         }else { // if no, release
-            System.out.println("Server: txn: " + txn.txnId + " abort. filename: " + txn.filename);
+            System.out.println("Server: txn: " + txn.txnId + " abort. filename: "
+                                + txn.filename);
             txn.status = Transaction.TXNStatus.ABORT;
             abort(txn);
         }
     }
 
     /**
-     * tell each node to delete the resources.
-     * @param txn
+     * notify related userNodes to commit transaction
+     * @param txn transaction
      */
     public static void commit(Transaction txn){
         try {
@@ -163,33 +173,28 @@ public class Server implements ProjectLib.CommitServing{
             }catch (Exception e){
                 e.printStackTrace();
             }
-        /*
-        for (Map.Entry<Transaction.Source, Boolean> entry : txn.answerList.entrySet()){
-            String curtNode = entry.getKey().node;
-            String curtComponent = entry.getKey().component;
-            Information info = new Information(txn.txnId, "COMMIT", txn.filename, curtNode, curtComponent);
 
-            blockingSendMsg(curtNode, info);
-        }*/
         for (Map.Entry<String, Boolean> entry : txn.ifAnswerList.entrySet()){
             String curtNode = entry.getKey();
             String curtComponent = "";
-            Information info = new Information(txn.txnId, "COMMIT", txn.filename, curtNode, curtComponent);
+            Information info = new Information(txn.txnId, "COMMIT", txn.filename,
+                                                curtNode, curtComponent);
             blockingSendMsg(curtNode, info);
         }
     }
 
+    /**
+     * notify related userNOdes to abort transaction
+     * @param txn
+     */
     public static void abort(Transaction txn) {
         System.out.println("Server: abort txn " + txn.txnId);
-        // delete pre-write files.
 
+        // delete pre-write files.
         File fileToDelete = new File(txn.filename);
         fileToDelete.delete();
-        System.out.println( "Server: txnid:" + txn.txnId + " delete pre-writefilename:" + txn.filename);
-
-        if (fileToDelete.exists()){
-            System.out.println("HELP!!!!!!!!!!!!");
-        }
+        System.out.println( "Server: txnid:" + txn.txnId + " delete pre-writefilename:"
+                            + txn.filename);
 
         try{
            logEvent(txn.txnId, "ABORT");
@@ -203,7 +208,8 @@ public class Server implements ProjectLib.CommitServing{
                continue;
             }
             String curtNode = entry.getKey().node;
-            Information info = new Information(txn.txnId, "ABORT", txn.filename, curtNode, "");
+            Information info = new Information(txn.txnId, "ABORT", txn.filename
+                                , curtNode, "");
             blockingSendMsg(curtNode, info);
         }
         // notify those haven't reply or dropped
@@ -212,12 +218,18 @@ public class Server implements ProjectLib.CommitServing{
                continue;
             }
             String curtNode = entry.getKey();
-            Information info = new Information(txn.txnId, "ABORT", txn.filename, curtNode, "");
+            Information info = new Information(txn.txnId, "ABORT", txn.filename
+                                , curtNode, "");
             blockingSendMsg(curtNode, info);
         }
     }
 
 
+    /**
+     * main function for UserNode
+     * @param args
+     * @throws Exception
+     */
 	public static void main ( String args[] ) throws Exception {
 		if (args.length != 1) throw new Exception("Need 1 arg: <port>");
 		Server srv = new Server();
@@ -226,36 +238,38 @@ public class Server implements ProjectLib.CommitServing{
 
         rollingback();
         Runtime.getRuntime().addShutdownHook(new UserNode.CleanDirHelper("Server"));
+
         // main loop
 		while (true) {
 			ProjectLib.Message msg = PL.getMessage();
-//			System.out.println( "Server: Got message from " + msg.addr );
             processMsg(msg);
 		}
 	}
 
 
     /**
-     *
-     * @param msg
+     * process msg
+     * @param msg message
      */
     public static void processMsg(ProjectLib.Message msg){
         String node = msg.addr;
         Information info = new Information(msg.body);
-        System.out.println("Server: process reply " + info.action + " txnID:" + info.txnID + " from node:" + msg.addr + " filename:" + info.filename + " reply: " + info.reply);
+        System.out.println("Server: process reply " + info.action + " txnID:"
+                + info.txnID + " from node:" + msg.addr + " filename:"
+                + info.filename + " reply: " + info.reply);
         if (globalReplyList.containsKey(info)) {
             globalReplyList.get(info).set(true);
         } // else, dropped ASK msg, ignore...
         else {
-            System.out.println("Server: received dropped/ very delayed ask msg..., ignore");
+            System.out.println("Server: received dropped/delayed ask msg, ignore");
             return;
         }
 
         Transaction txn = transactionMap.get(info.filename);
         if (info.action == Information.actionType.ASK){
             // if it is a ASK msg, then count the txn consensusCnt, and act
-            // msg.addr = info.node;
-            txn.answerList.put(new Transaction.Source(msg.addr, info.componentStr), info.reply);
+            txn.answerList.put(new Transaction.Source(msg.addr, info.componentStr),
+                                info.reply);
             txn.ifAnswerList.put(msg.addr, true);
             final int replyCnt = txn.consensusCnt.incrementAndGet();
             if (replyCnt == txn.nodeCnt){
@@ -266,14 +280,11 @@ public class Server implements ProjectLib.CommitServing{
             }
 
         // receive commit ack
-        }else if (info.action == Information.actionType.COMMIT || info.action == Information.actionType.ABORT){
+        }else if (info.action == Information.actionType.COMMIT ||
+                    info.action == Information.actionType.ABORT){
             // pre-write has already been conducted
-            // txn.Status must be COMMIT
-            // msg.addr = info.node;
             final int replyCnt = txn.consensusCnt.incrementAndGet();
             if (replyCnt == txn.nodeCnt){
-//                txn.consensusCnt.set(0);
-//                txn.answerList.clear();
                 transactionMap.remove(txn);
                 try{
                     logEvent(txn.txnId, "FINISH");
@@ -285,15 +296,24 @@ public class Server implements ProjectLib.CommitServing{
     }
 
 
-    public static void logHeader(int txnID, String filename, HashMap<String, ArrayList<String>> localSourceMap)  throws IOException {
-//        String logName = String.valueOf(txnID)+".log";
+    /**
+     * log transaction's information into "txnRecord.log"
+     * @param txnID transactionID
+     * @param filename filename
+     * @param localSourceMap source images map
+     * @throws IOException
+     */
+    public static void logHeader(int txnID, String filename, HashMap<String,
+                                ArrayList<String>> localSourceMap)
+                                throws IOException {
         String logName = "txnRecord.log";
         // append
         FileWriter fos = new FileWriter(new File(logName), true);
         BufferedWriter osw = new BufferedWriter(fos);
         StringBuilder sb = new StringBuilder();
         sb.append(txnID).append(" ").append(filename).append(" ");
-        for (Map.Entry<String, ArrayList<String>> entry: localSourceMap.entrySet()){
+        for (Map.Entry<String, ArrayList<String>> entry:
+                localSourceMap.entrySet()){
             sb.append(entry.getKey()).append(":");
             ArrayList<String> comps = entry.getValue();
             for (int i = 0; i < comps.size() -1; ++i){
@@ -309,6 +329,12 @@ public class Server implements ProjectLib.CommitServing{
         PL.fsync();
     }
 
+    /**
+     * log event into this transaction's log file
+     * @param txnID transactionID
+     * @param event event
+     * @throws Exception
+     */
     public static void logEvent(int txnID, String event) throws Exception{
         String logName = String.valueOf(txnID)+".log";
         FileWriter fos = new FileWriter(new File(logName), true);
@@ -320,6 +346,10 @@ public class Server implements ProjectLib.CommitServing{
         PL.fsync();
     }
 
+    /**
+     * rollingback to last checkpoint
+     * @throws Exception
+     */
     public static void rollingback() throws Exception{
         // read "txnRecord.log"
         File recordFile = new File("txnRecord.log");
@@ -337,11 +367,10 @@ public class Server implements ProjectLib.CommitServing{
             }
             int txnID = Integer.parseInt(parts[0]);
             lastTxnID.set(txnID);
-            // check this txn's status first.
 
+            // check this txn's status first.
             File curTxnLog = new File(txnID+".log");
             if (curTxnLog.exists() == false){
-
                 // stale data
                 continue;
             }
@@ -361,9 +390,6 @@ public class Server implements ProjectLib.CommitServing{
             readerForEachTxn.close();
             brForEachTxn.close();
             curTxnLog.delete();
-            if (curTxnLog.exists()){
-                System.out.println("HELP!!!!!!!!!!!!");
-            }
 
             System.out.println("rollingback -- txn:" + txnID + " " + status);
             if (status == Transaction.TXNStatus.FINISH){
@@ -378,11 +404,14 @@ public class Server implements ProjectLib.CommitServing{
             for (String singleNode : components){
                 String [] innerParts = singleNode.split(":");
                 localSourceList.add(innerParts[0]);
-                System.out.println("Server: rooling back, find:" + singleNode +" involved in txn:" + txnID);
+                System.out.println("Server: rolling back, find:" + singleNode +
+                                    " involved in txn:" + txnID);
             }
-            Transaction txn =  new Transaction(txnID, filename, useless, components.length, localSourceList, status);
+            Transaction txn =  new Transaction(txnID, filename, useless,
+                                    components.length, localSourceList, status);
             transactionMap.put(filename, txn);
-            if (status == Transaction.TXNStatus.ABORT || status == Transaction.TXNStatus.INQUIRY){
+            if (status == Transaction.TXNStatus.ABORT ||
+                status == Transaction.TXNStatus.INQUIRY){
                 abort(txn);
             } else if (status == Transaction.TXNStatus.COMMIT){
                 commit(txn);
@@ -392,16 +421,14 @@ public class Server implements ProjectLib.CommitServing{
         } // end of a line
         fis.close();
         isw.close();
-/*
-        recordFile.delete();
-        if (recordFile.exists()){
-            System.out.println("HELP!!!!!!!!!!!!!!!");
-        }
-        */
+
         lastTxnID.incrementAndGet();
         System.out.println("Server: rolling back lasttxnid:" + lastTxnID);
     }
 
+    /**
+     * clean working direcotry helper class
+     */
     static class CleanDirHelper extends Thread{
 
         public void run() {

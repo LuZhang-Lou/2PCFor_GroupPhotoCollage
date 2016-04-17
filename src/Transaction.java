@@ -15,8 +15,9 @@ public class Transaction {
     public int nodeCnt;
     public byte[] img;
     public int txnId;
-    // key: node:component, value : the answer
+    // reocord source's node's reply
     public ConcurrentHashMap<Source, Boolean> answerList;
+    // record if source node has reply.
     public ConcurrentHashMap<String, Boolean> ifAnswerList;
 
     Transaction(int id, String filename, byte[] img, int num, ArrayList<String> sources){
