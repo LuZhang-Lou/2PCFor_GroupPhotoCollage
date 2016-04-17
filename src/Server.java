@@ -217,6 +217,9 @@ public class Server implements ProjectLib.CommitServing{
 		PL = new ProjectLib( Integer.parseInt(args[0]), srv );
         System.out.println("===================Server is up:");
 
+        rollingback();
+
+
         // main loop
 		while (true) {
 			ProjectLib.Message msg = PL.getMessage();
@@ -285,6 +288,7 @@ public class Server implements ProjectLib.CommitServing{
                 sb.append(comps.get(i)).append(":");
             }
             sb.append(comps.get(comps.size()-1));
+            sb.append(";");
         }
         osw.write(sb.toString());
         osw.newLine();
@@ -322,15 +326,16 @@ public class Server implements ProjectLib.CommitServing{
             String innerLine;
             Transaction.TXNStatus status = Transaction.TXNStatus.INQUIRY;
             while ((innerLine = brForEachTxn.readLine()) != null){
-               if (innerLine.equalsIgnoreCase("COMMIT")){
-                   status = Transaction.TXNStatus.COMMIT;
-               }else if (innerLine.equalsIgnoreCase("ABORT")){
-                   status = Transaction.TXNStatus.ABORT;
-               }else if (innerLine.equalsIgnoreCase("FINISH")){
-                   status = Transaction.TXNStatus.FINISH;
-               }
+                if (innerLine.equalsIgnoreCase("COMMIT")){
+                    status = Transaction.TXNStatus.COMMIT;
+                }else if (innerLine.equalsIgnoreCase("ABORT")){
+                    status = Transaction.TXNStatus.ABORT;
+                }else if (innerLine.equalsIgnoreCase("FINISH")){
+                    status = Transaction.TXNStatus.FINISH;
+                }
             }
             brForEachTxn.close();
+            System.out.println("rollingback -- txn:" + txnID + " " + status);
             if (status == Transaction.TXNStatus.FINISH){
                 continue;
             }
@@ -340,9 +345,10 @@ public class Server implements ProjectLib.CommitServing{
             String sourceInOne = parts[2];
             String [] components = sourceInOne.split(";");
             ArrayList<String> localSourceList = new ArrayList<>();
-            String node = components[0];
-            for (int i = 1; i < components.length-1; ++i){
-                localSourceList.add(components[i]);
+            for (String singleNode : components){
+                String [] innerParts = singleNode.split(":");
+                localSourceList.add(innerParts[0]);
+                System.out.println("Server: rooling back, find:" + innerParts +" involved in txn:" + txnID);
             }
             Transaction txn =  new Transaction(txnID, filename, useless, components.length, localSourceList, status);
             transactionMap.put(filename, txn);

@@ -1,22 +1,24 @@
-import java.io.File;
+import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class UserNode implements ProjectLib.MessageHandling {
-    public ConcurrentHashMap<String, Integer> imagesStatus;
-    public ConcurrentHashMap<Integer, ArrayList<String>> lockedFiles;
-//    public ConcurrentHashMap<Information, AtomicBoolean> globalReplyList;
+    public static ConcurrentHashMap<String, Integer> imagesStatus;
+    public static ConcurrentHashMap<Integer, ArrayList<String>> lockedFiles;
+    //    public ConcurrentHashMap<Information, AtomicBoolean> globalReplyList;
     public ReentrantReadWriteLock fileLock;
-	public final String myId;
+    public static String myId = "";
 //    public static final long DropThreshold = 6100;
 
     public static ProjectLib PL;
     public static UserNode UN;
 
-	public UserNode( String id ) {
-		myId = id;
+    public UserNode(String id) {
+        myId = id;
         System.out.println("=================== user: " + myId + " is up:");
         imagesStatus = new ConcurrentHashMap<>();
         lockedFiles = new ConcurrentHashMap<>();
@@ -31,29 +33,29 @@ public class UserNode implements ProjectLib.MessageHandling {
             }
         }
 
-	}
+    }
 
-	public boolean deliverMessage( ProjectLib.Message msg ) {
+    public boolean deliverMessage(ProjectLib.Message msg) {
         Information info = new Information(msg.body);
         processMsg(info);
-		return true;
-	}
-	
-	public static void main ( String args[] ) throws Exception {
-		if (args.length != 2) throw new Exception("Need 2 args: <port> <id>");
-		UN = new UserNode(args[1]);
-		PL = new ProjectLib( Integer.parseInt(args[0]), args[1], UN );
-	}
+        return true;
+    }
 
-    public void processMsg(Information info){
+    public static void main(String args[]) throws Exception {
+        if (args.length != 2) throw new Exception("Need 2 args: <port> <id>");
+        UN = new UserNode(args[1]);
+        PL = new ProjectLib(Integer.parseInt(args[0]), args[1], UN);
+    }
+
+    public void processMsg(Information info) {
         try {
             Information reply = new Information(info);
             if (info.action == Information.actionType.ASK) {
                 // assume one txn one ASK msg.
-                if (lockedFiles.containsKey(info.txnID)){
+                if (lockedFiles.containsKey(info.txnID)) {
                     System.out.println("!!!!!!!!!!!!!!call the police!!!!!!!!!!!!!!");
                 }
-                System.out.println( myId + ": process ASK. txnid:" + info.txnID + " filename:" + info.filename + " comps:" + info.componentStr);
+                System.out.println(myId + ": process ASK. txnid:" + info.txnID + " filename:" + info.filename + " comps:" + info.componentStr);
                 String[] comps = info.componentStr.split("&");
                 boolean ret = true;
                 ArrayList<String> compList = new ArrayList<>();
@@ -65,76 +67,83 @@ public class UserNode implements ProjectLib.MessageHandling {
                     }
                     compList.add(curtComp);
                 }
-
-                if (ret){
+                if (ret) {
+                    logHeader(info.txnID, info.filename, compList);
                     boolean askRet = PL.askUser(info.img, comps);
                     if (askRet) {
                         lockFile(info.txnID, compList);
-                        System.out.println( myId + ": process ASK. txnid:" + info.txnID + " filename:" + info.filename + " user accept");
+                        System.out.println(myId + ": process ASK. txnid:" + info.txnID + " filename:" + info.filename + " user accept");
                         reply.reply = true;
-                    }else{
-                        System.out.println( myId + ": process ASK. txnid:" + info.txnID + " filename:" + info.filename + " user refuse");
+                        logEvent(info.txnID, "ACCEPT");
+                    } else {
+                        System.out.println(myId + ": process ASK. txnid:" + info.txnID + " filename:" + info.filename + " user refuse");
                         reply.reply = false;
+                        logEvent(info.txnID, "REFUSE");
                     }
                 } else {
-                    System.out.println( myId + ": process ASK. txnid:" + info.txnID + " filename:" + info.filename + " file not exists or is locked");
+                    System.out.println(myId + ": process ASK. txnid:" + info.txnID + " filename:" + info.filename + " file not exists or is locked");
                     reply.reply = false;
+                    logEvent(info.txnID, "REFUSE");
                 }
                 fileLock.writeLock().unlock();
                 sendMsg(reply, this.myId);
             } else if (info.action == Information.actionType.COMMIT) {
                 // might get duplicate commit msg.
                 fileLock.writeLock().lock();
-                if (lockedFiles.containsKey(info.txnID) == false){ // dup msg, resend
-                    System.out.println( myId + ": receive dup COMMIT msg. txnid:" + info.txnID + " filename:" + info.filename + "resend..");
-                }else { // get this msg first time, process and send reply
+                logEvent(info.txnID, "COMMIT");
+                if (lockedFiles.containsKey(info.txnID) == false) { // dup msg, resend
+                    System.out.println(myId + ": receive dup COMMIT msg. txnid:" + info.txnID + " filename:" + info.filename + "resend..");
+                } else { // get this msg first time, process and send reply
                     System.out.println(myId + ": process COMMIT. txnid:" + info.txnID + " filename:" + info.filename);
                     deleteFile(info.txnID);
                 }
                 fileLock.writeLock().unlock();
                 sendMsg(reply, this.myId);
+                logEvent(info.txnID, "FINISH");
             } else if (info.action == Information.actionType.ABORT) {
                 // might get duplicate commit msg.
                 fileLock.writeLock().lock();
-                if (lockedFiles.containsKey(info.txnID) == false){
-                    System.out.println( myId + ": receive dup ABORT msg. txnid:" + info.txnID + " filename:" + info.filename + "resend..");
-                }else {
+                logEvent(info.txnID, "ABORT");
+                if (lockedFiles.containsKey(info.txnID) == false) {
+                    System.out.println(myId + ": receive dup ABORT msg. txnid:" + info.txnID + " filename:" + info.filename + "resend..");
+                } else {
                     System.out.println(myId + ": process ABORT. txnid:" + info.txnID + " filename:" + info.filename);
                     releaseHold(info.txnID);
                 }
                 fileLock.writeLock().unlock();
                 sendMsg(reply, this.myId);
+                logEvent(info.txnID, "FINISH");
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public void lockFile(int txnid, ArrayList<String> comps){
+    public static void lockFile(int txnid, ArrayList<String> comps) {
         lockedFiles.put(txnid, comps);
         for (String curtComp : comps) {
             imagesStatus.put(curtComp, txnid);
         }
     }
 
-    public void deleteFile(int txnid){
-        System.out.println( myId + ": txnid:" + txnid + " in delete.");
+    public static void deleteFile(int txnid) {
+        System.out.println(myId + ": txnid:" + txnid + " in delete.");
         ArrayList<String> comps = lockedFiles.get(txnid);
-        for (String curtComp : comps){
+        for (String curtComp : comps) {
             imagesStatus.remove(curtComp);
             File fileToDelete = new File(curtComp);
             fileToDelete.delete();
-            System.out.println( myId + ": txnid:" + txnid + " delete filename:" +curtComp);
-            if (fileToDelete.exists()){
+            System.out.println(myId + ": txnid:" + txnid + " delete filename:" + curtComp);
+            if (fileToDelete.exists()) {
                 System.out.println("HELP!!!!!!!!!!!!");
             }
         }
         lockedFiles.remove(txnid);
     }
 
-    public void releaseHold(int txnid){
+    public static void releaseHold(int txnid) {
         ArrayList<String> comps = lockedFiles.get(txnid);
-        for (String curtComp : comps){
+        for (String curtComp : comps) {
             imagesStatus.put(curtComp, 0);
         }
         lockedFiles.remove(txnid);
@@ -142,15 +151,107 @@ public class UserNode implements ProjectLib.MessageHandling {
 
     // usernode side don't have to keep track of whether server receive the msg.
     // b.c. if the msg is dropped, server will resend msg.
-    public void sendMsg(Information info, String myID){
-        System.out.println(myID + ": send msg to server to " + info.action + " txnid:" + info.txnID + " filename:" + info.filename + "comps: " + info.componentStr + " reply:"+ info.reply) ;
+    public void sendMsg(Information info, String myID) {
+        System.out.println(myID + ": send msg to server to " + info.action + " txnid:" + info.txnID + " filename:" + info.filename + "comps: " + info.componentStr + " reply:" + info.reply);
         ProjectLib.Message msg = new ProjectLib.Message("Server", info.getBytes());
         PL.sendMessage(msg);
     }
 
+    public static void logEvent(int txnID, String event) throws Exception {
+        String logName = String.valueOf(txnID) + ".log";
+        FileWriter fos = new FileWriter(new File(logName), true);
+        BufferedWriter osw = new BufferedWriter(fos);
+        osw.write(event);
+        osw.newLine();
+        osw.flush();
+        osw.close();
+    }
 
 
+    public static void logHeader(int txnID, String filename, ArrayList<String> localSourceList) throws IOException {
+//        String logName = String.valueOf(txnID)+".log";
+        String logName = "txnRecord.log";
+        // append
+        FileWriter fos = new FileWriter(new File(logName), true);
+        BufferedWriter osw = new BufferedWriter(fos);
+        StringBuilder sb = new StringBuilder();
+        sb.append(txnID).append(" ").append(filename).append(" ");
+        for (int i = 0; i < localSourceList.size() - 1; ++i) {
+            sb.append(localSourceList.get(i)).append(":");
+        }
+        sb.append(localSourceList.get(localSourceList.size() - 1));
+        osw.write(sb.toString());
+        osw.newLine();
+        osw.flush();
+        osw.close();
+    }
 
+
+    public static void rollingback() throws Exception{
+        // read "txnRecord.log"
+        File recordFile = new File("txnRecord.log");
+        FileReader fis = new FileReader(recordFile);
+        BufferedReader isw = new BufferedReader(fis);
+        String line;
+        while((line = isw.readLine()) != null) {
+            String[] parts = line.split(" ");
+            if (parts.length != 3){
+                throw new Exception("Log corrupted.");
+            }
+            int txnID = Integer.parseInt(parts[0]);
+            // check this txn's status first.
+
+            File curTxnLog = new File(txnID+".log");
+            FileReader readerForEachTxn = new FileReader(curTxnLog);
+            BufferedReader brForEachTxn = new BufferedReader(readerForEachTxn);
+            String innerLine;
+            String status = "";
+            while ((innerLine = brForEachTxn.readLine()) != null){
+                if (innerLine.equalsIgnoreCase("COMMIT")){
+                    status = "COMMIT";
+                }else if (innerLine.equalsIgnoreCase("ABORT")){
+                    status = "ABORT";
+                }else if (innerLine.equalsIgnoreCase("ACCEPT")){
+                    status = "ACCEPT";
+                }else if (innerLine.equalsIgnoreCase("REFUSE")){
+                    status = "REFUSE";
+                }
+            brForEachTxn.close();
+            System.out.println("rollingback -- txn:" + txnID + " " + status);
+            if (status.equalsIgnoreCase("REFUSE") || status.equalsIgnoreCase("ABORT")){
+                continue;
+            }
+
+            String filename = parts[1];
+            byte[] useless = new byte[1];
+            String sourceInOne = parts[2];
+            String [] components = sourceInOne.split(";");
+            ArrayList<String> localSourceList = new ArrayList<>();
+            String node = components[0];
+            for (int i = 1; i < components.length-1; ++i){
+                localSourceList.add(components[i]);
+            }
+
+            if (status.equalsIgnoreCase("ACCEPT")){
+                lockFile(txnID, localSourceList);
+            } else if (status.equalsIgnoreCase("COMMIT")){
+                lockFile(txnID, localSourceList);
+                deleteFile(txnID);
+            }
+
+            curTxnLog.delete();
+            if (curTxnLog.exists()){
+                System.out.println("HELP!!!!!!!!!!!!");
+            }
+
+
+        } // end of a line
+        isw.close();
+        recordFile.delete();
+        if (recordFile.exists()){
+            System.out.println("HELP!!!!!!!!!!!!!!!");
+        }
+    }
 
 }
 
