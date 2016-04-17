@@ -407,7 +407,7 @@ public class Server implements ProjectLib.CommitServing{
                 System.out.println("Server: rolling back, find:" + singleNode +
                                     " involved in txn:" + txnID);
             }
-            Transaction txn =  new Transaction(txnID, filename, useless,
+            Transaction txn=  new Transaction(txnID, filename, useless,
                                     components.length, localSourceList, status);
             transactionMap.put(filename, txn);
             if (status == Transaction.TXNStatus.ABORT ||
