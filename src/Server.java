@@ -102,7 +102,7 @@ public class Server implements ProjectLib.CommitServing{
                             // getting message.
                             if (info.action == Information.actionType.ASK) {
                                 Transaction txn = transactionMap.get(info.filename);
-                                System.out.println("Server: txn: " + txn.txnId + " in phase 1 time out. => abort filename: " + txn.filename);
+                                System.out.println("Server: txn: " + txn.txnId + " in phase 1 dest:" + info.node + " time out. => abort filename: " + txn.filename);
                                 txn.status = Transaction.TXNStatus.ABORT;
                                 abort(txn);
                                 txn.consensusCnt.set(0);
@@ -110,7 +110,7 @@ public class Server implements ProjectLib.CommitServing{
                                 globalReplyList.remove(info);
                                 break;
                             }else { // in phase2, commit or abort. resend.
-                                System.out.println("Server: txn: " + info.txnID + " in phase 2 time out. => resend  filename: " + info.filename);
+                                System.out.println("Server: txn: " + info.txnID + " in phase 2 dest:" + info.node + " time out. => resend  filename: " + info.filename);
                                 PL.sendMessage(msg);
                                 lastSendTime = System.currentTimeMillis();
                             }
@@ -236,9 +236,11 @@ public class Server implements ProjectLib.CommitServing{
     public static void processMsg(ProjectLib.Message msg){
         String node = msg.addr;
         Information info = new Information(msg.body);
-        globalReplyList.get(info).set(true);
-
         System.out.println("Server: process reply " + info.action + " txnID:" + info.txnID + " from node:" + msg.addr + " filename:" + info.filename + " reply: " + info.reply);
+        if (globalReplyList.containsKey(info)) {
+            globalReplyList.get(info).set(true);
+        } // else, dropped msg, ignore
+
         Transaction txn = transactionMap.get(info.filename);
         if (info.action == Information.actionType.ASK){
             // if it is a ASK msg, then count the txn consensusCnt, and act
@@ -294,6 +296,7 @@ public class Server implements ProjectLib.CommitServing{
         osw.newLine();
         osw.flush();
         osw.close();
+        PL.fsync();
     }
 
     public static void logEvent(int txnID, String event) throws Exception{
@@ -304,11 +307,16 @@ public class Server implements ProjectLib.CommitServing{
         osw.newLine();
         osw.flush();
         osw.close();
+        PL.fsync();
     }
 
     public static void rollingback() throws Exception{
         // read "txnRecord.log"
         File recordFile = new File("txnRecord.log");
+        if (recordFile.exists() == false){
+            System.out.println("Server: No historic record.");
+            return;
+        }
         FileReader fis = new FileReader(recordFile);
         BufferedReader isw = new BufferedReader(fis);
         String line;
@@ -334,7 +342,13 @@ public class Server implements ProjectLib.CommitServing{
                     status = Transaction.TXNStatus.FINISH;
                 }
             }
+            readerForEachTxn.close();
             brForEachTxn.close();
+            curTxnLog.delete();
+            if (curTxnLog.exists()){
+                System.out.println("HELP!!!!!!!!!!!!");
+            }
+
             System.out.println("rollingback -- txn:" + txnID + " " + status);
             if (status == Transaction.TXNStatus.FINISH){
                 continue;
@@ -358,13 +372,10 @@ public class Server implements ProjectLib.CommitServing{
                 commit(txn);
             }
 
-            curTxnLog.delete();
-            if (curTxnLog.exists()){
-                System.out.println("HELP!!!!!!!!!!!!");
-            }
 
 
         } // end of a line
+        fis.close();
         isw.close();
         recordFile.delete();
         if (recordFile.exists()){

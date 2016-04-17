@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="54e42199-80a9-45cc-8881-b303f5b1cb95" name="Default" comment="">
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/Server.java" afterPath="$PROJECT_DIR$/src/Server.java" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/UserNode.java" afterPath="$PROJECT_DIR$/src/UserNode.java" />
     </list>
@@ -31,8 +32,8 @@
           <file leaf-file-name="Transaction.java" pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/src/Transaction.java">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="175">
-                  <caret line="24" column="17" selection-start-line="24" selection-start-column="17" selection-end-line="24" selection-end-column="17" />
+                <state relative-caret-position="422">
+                  <caret line="49" column="0" selection-start-line="49" selection-start-column="0" selection-end-line="49" selection-end-column="0" />
                   <folding>
                     <element signature="imports" expanded="true" />
                   </folding>
@@ -43,8 +44,8 @@
           <file leaf-file-name="Server.java" pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/src/Server.java">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="753">
-                  <caret line="352" column="41" selection-start-line="352" selection-start-column="41" selection-end-line="352" selection-end-column="41" />
+                <state relative-caret-position="558">
+                  <caret line="374" column="0" selection-start-line="374" selection-start-column="0" selection-end-line="374" selection-end-column="0" />
                   <folding>
                     <element signature="imports" expanded="true" />
                   </folding>
@@ -55,8 +56,8 @@
           <file leaf-file-name="Project4.class" pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/lib/Project4.class">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="623">
-                  <caret line="489" column="13" selection-start-line="489" selection-start-column="13" selection-end-line="489" selection-end-column="13" />
+                <state relative-caret-position="226">
+                  <caret line="156" column="31" selection-start-line="156" selection-start-column="31" selection-end-line="156" selection-end-column="31" />
                   <folding />
                 </state>
               </provider>
@@ -65,8 +66,8 @@
           <file leaf-file-name="Information.java" pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/src/Information.java">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="-927">
-                  <caret line="111" column="8" selection-start-line="111" selection-start-column="8" selection-end-line="111" selection-end-column="8" />
+                <state relative-caret-position="399">
+                  <caret line="176" column="25" selection-start-line="176" selection-start-column="25" selection-end-line="176" selection-end-column="25" />
                   <folding />
                 </state>
               </provider>
@@ -92,8 +93,8 @@
                 <state relative-caret-position="235">
                   <caret line="89" column="26" selection-start-line="89" selection-start-column="26" selection-end-line="89" selection-end-column="26" />
                   <folding>
-                    <marker date="1460855272000" expanded="true" signature="3014:5707" placeholder="{...}" />
-                    <marker date="1460855272000" expanded="true" signature="3068:5697" placeholder="{...}" />
+                    <marker date="1460864308000" expanded="true" signature="3014:5753" placeholder="{...}" />
+                    <marker date="1460864308000" expanded="true" signature="3068:5743" placeholder="{...}" />
                   </folding>
                 </state>
               </provider>
@@ -102,9 +103,11 @@
           <file leaf-file-name="UserNode.java" pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/src/UserNode.java">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="627">
-                  <caret line="109" column="38" selection-start-line="109" selection-start-column="38" selection-end-line="109" selection-end-column="38" />
-                  <folding />
+                <state relative-caret-position="228">
+                  <caret line="34" column="0" selection-start-line="34" selection-start-column="0" selection-end-line="34" selection-end-column="0" />
+                  <folding>
+                    <element signature="imports" expanded="true" />
+                  </folding>
                 </state>
               </provider>
             </entry>
@@ -660,12 +663,12 @@
       <workItem from="1460131361303" duration="45589000" />
       <workItem from="1460303982744" duration="880000" />
       <workItem from="1460774218350" duration="249000" />
-      <workItem from="1460818513168" duration="18814000" />
+      <workItem from="1460818513168" duration="25683000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="65875000" />
+    <option name="totallyTimeSpent" value="72744000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="0" width="1920" height="1200" extended-state="0" />
@@ -750,7 +753,7 @@
           <option name="timeStamp" value="3" />
         </line-breakpoint>
       </breakpoints>
-      <option name="time" value="4" />
+      <option name="time" value="5" />
     </breakpoint-manager>
     <watches-manager />
   </component>
@@ -873,8 +876,8 @@
         <state relative-caret-position="0">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
-            <marker date="1460855272000" expanded="true" signature="3014:5707" placeholder="{...}" />
-            <marker date="1460855272000" expanded="true" signature="3068:5697" placeholder="{...}" />
+            <marker date="1460864308000" expanded="true" signature="3014:5753" placeholder="{...}" />
+            <marker date="1460864308000" expanded="true" signature="3068:5743" placeholder="{...}" />
           </folding>
         </state>
       </provider>
@@ -884,8 +887,8 @@
         <state relative-caret-position="0">
           <caret line="0" column="29" selection-start-line="0" selection-start-column="29" selection-end-line="0" selection-end-column="29" />
           <folding>
-            <marker date="1460855272000" expanded="true" signature="3014:5707" placeholder="{...}" />
-            <marker date="1460855272000" expanded="true" signature="3068:5697" placeholder="{...}" />
+            <marker date="1460864308000" expanded="true" signature="3014:5753" placeholder="{...}" />
+            <marker date="1460864308000" expanded="true" signature="3068:5743" placeholder="{...}" />
           </folding>
         </state>
       </provider>
@@ -894,7 +897,9 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="330">
           <caret line="24" column="0" selection-start-line="24" selection-start-column="0" selection-end-line="24" selection-end-column="0" />
-          <folding />
+          <folding>
+            <element signature="imports" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
@@ -903,8 +908,8 @@
         <state relative-caret-position="0">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
-            <marker date="1460855272000" expanded="true" signature="3014:5707" placeholder="{...}" />
-            <marker date="1460855272000" expanded="true" signature="3068:5697" placeholder="{...}" />
+            <marker date="1460864308000" expanded="true" signature="3014:5753" placeholder="{...}" />
+            <marker date="1460864308000" expanded="true" signature="3068:5743" placeholder="{...}" />
           </folding>
         </state>
       </provider>
@@ -1013,24 +1018,24 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/Information.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-927">
-          <caret line="111" column="8" selection-start-line="111" selection-start-column="8" selection-end-line="111" selection-end-column="8" />
+        <state relative-caret-position="399">
+          <caret line="176" column="25" selection-start-line="176" selection-start-column="25" selection-end-line="176" selection-end-column="25" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/lib/Project4.class">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="623">
-          <caret line="489" column="13" selection-start-line="489" selection-start-column="13" selection-end-line="489" selection-end-column="13" />
+        <state relative-caret-position="226">
+          <caret line="156" column="31" selection-start-line="156" selection-start-column="31" selection-end-line="156" selection-end-column="31" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/Transaction.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="175">
-          <caret line="24" column="17" selection-start-line="24" selection-start-column="17" selection-end-line="24" selection-end-column="17" />
+        <state relative-caret-position="422">
+          <caret line="49" column="0" selection-start-line="49" selection-start-column="0" selection-end-line="49" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
           </folding>
@@ -1042,17 +1047,19 @@
         <state relative-caret-position="235">
           <caret line="89" column="26" selection-start-line="89" selection-start-column="26" selection-end-line="89" selection-end-column="26" />
           <folding>
-            <marker date="1460855272000" expanded="true" signature="3014:5707" placeholder="{...}" />
-            <marker date="1460855272000" expanded="true" signature="3068:5697" placeholder="{...}" />
+            <marker date="1460864308000" expanded="true" signature="3014:5753" placeholder="{...}" />
+            <marker date="1460864308000" expanded="true" signature="3068:5743" placeholder="{...}" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/UserNode.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="627">
-          <caret line="109" column="38" selection-start-line="109" selection-start-column="38" selection-end-line="109" selection-end-column="38" />
-          <folding />
+        <state relative-caret-position="228">
+          <caret line="34" column="0" selection-start-line="34" selection-start-column="0" selection-end-line="34" selection-end-column="0" />
+          <folding>
+            <element signature="imports" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
