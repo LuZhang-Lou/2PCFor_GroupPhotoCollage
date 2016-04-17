@@ -17,6 +17,7 @@ public class UserNode implements ProjectLib.MessageHandling {
     public static ProjectLib PL;
     public static UserNode UN;
 
+
     public UserNode(String id)throws  Exception {
         myId = id;
         System.out.println("=================== user: " + myId + " is up:");
@@ -24,6 +25,7 @@ public class UserNode implements ProjectLib.MessageHandling {
         lockedFiles = new ConcurrentHashMap<>();
 //        globalReplyList = new ConcurrentHashMap<>();
         fileLock = new ReentrantReadWriteLock();
+
 
         final File home = new File(".");
         for (final File fileEntry : home.listFiles()) {
@@ -47,7 +49,7 @@ public class UserNode implements ProjectLib.MessageHandling {
         if (args.length != 2) throw new Exception("Need 2 args: <port> <id>");
         UN = new UserNode(args[1]);
         PL = new ProjectLib(Integer.parseInt(args[0]), args[1], UN);
-        Runtime.getRuntime().addShutdownHook(new CleanDirHelper());
+        Runtime.getRuntime().addShutdownHook(new CleanDirHelper(myId));
 
     }
 
@@ -70,6 +72,7 @@ public class UserNode implements ProjectLib.MessageHandling {
 //                        break;
                     }
                     compList.add(curtComp);
+
                 }
                 if (ret) {
                     boolean askRet = PL.askUser(info.img, comps);
@@ -282,9 +285,11 @@ public class UserNode implements ProjectLib.MessageHandling {
     }
 
     static class CleanDirHelper extends Thread{
-
+        String id;
+        CleanDirHelper(String id){this.id = id;}
         public void run() {
             // clean up dirs
+            System.out.println(id+": dying.........");
             final File home = new File(".");
             for (final File fileEntry : home.listFiles()) {
                 if (fileEntry.isDirectory()){

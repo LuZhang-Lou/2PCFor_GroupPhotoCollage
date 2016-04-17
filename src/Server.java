@@ -163,11 +163,18 @@ public class Server implements ProjectLib.CommitServing{
             }catch (Exception e){
                 e.printStackTrace();
             }
+        /*
         for (Map.Entry<Transaction.Source, Boolean> entry : txn.answerList.entrySet()){
             String curtNode = entry.getKey().node;
             String curtComponent = entry.getKey().component;
             Information info = new Information(txn.txnId, "COMMIT", txn.filename, curtNode, curtComponent);
 
+            blockingSendMsg(curtNode, info);
+        }*/
+        for (Map.Entry<String, Boolean> entry : txn.ifAnswerList.entrySet()){
+            String curtNode = entry.getKey();
+            String curtComponent = "";
+            Information info = new Information(txn.txnId, "COMMIT", txn.filename, curtNode, curtComponent);
             blockingSendMsg(curtNode, info);
         }
     }
@@ -218,7 +225,7 @@ public class Server implements ProjectLib.CommitServing{
         System.out.println("===================Server is up:");
 
         rollingback();
-        Runtime.getRuntime().addShutdownHook(new UserNode.CleanDirHelper());
+        Runtime.getRuntime().addShutdownHook(new UserNode.CleanDirHelper("Server"));
         // main loop
 		while (true) {
 			ProjectLib.Message msg = PL.getMessage();
@@ -329,9 +336,15 @@ public class Server implements ProjectLib.CommitServing{
                 throw new Exception("Log corrupted.");
             }
             int txnID = Integer.parseInt(parts[0]);
+            lastTxnID.set(txnID);
             // check this txn's status first.
 
             File curTxnLog = new File(txnID+".log");
+            if (curTxnLog.exists() == false){
+
+                // stale data
+                continue;
+            }
             FileReader readerForEachTxn = new FileReader(curTxnLog);
             BufferedReader brForEachTxn = new BufferedReader(readerForEachTxn);
             String innerLine;
@@ -365,7 +378,7 @@ public class Server implements ProjectLib.CommitServing{
             for (String singleNode : components){
                 String [] innerParts = singleNode.split(":");
                 localSourceList.add(innerParts[0]);
-                System.out.println("Server: rooling back, find:" + innerParts.toString() +" involved in txn:" + txnID);
+                System.out.println("Server: rooling back, find:" + singleNode +" involved in txn:" + txnID);
             }
             Transaction txn =  new Transaction(txnID, filename, useless, components.length, localSourceList, status);
             transactionMap.put(filename, txn);
@@ -376,14 +389,17 @@ public class Server implements ProjectLib.CommitServing{
             }
 
 
-
         } // end of a line
         fis.close();
         isw.close();
+/*
         recordFile.delete();
         if (recordFile.exists()){
             System.out.println("HELP!!!!!!!!!!!!!!!");
         }
+        */
+        lastTxnID.incrementAndGet();
+        System.out.println("Server: rolling back lasttxnid:" + lastTxnID);
     }
 
     static class CleanDirHelper extends Thread{
