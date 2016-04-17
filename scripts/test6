@@ -1,0 +1,18 @@
+# This script performs sequential commits.
+
+setDelay * * 0 # Don't delay to messages by default.
+start Server a b c
+wait 1000 # Wait for nodes to come up
+
+commit composites/1.jpg a:1.jpg b:3.jpg c:5.jpg
+wait 190 # server receive yes, but nodes will not receive commit msg
+setDelay Server * -1
+restart Server
+wait 2500 # Wait for server to start up and roolback, commit 1?
+setDelay Server * 0
+restart Server
+wait 7000
+
+
+
+
